@@ -129,6 +129,35 @@ labels in Dataset A and 373,073 high-confidence labels in Dataset B. See the
 [dataset build summary](reports/tables/clinvar_dataset_summary.md) for checksums,
 class distributions, and filtering counts.
 
+Train the first leakage-safe baselines under random and gene-aware validation:
+
+```bash
+uv run variantrank train --strategy both
+```
+
+For a fast development run, add `--max-rows 100000`. The persisted artifact
+contains the fitted pipeline, feature schema, dataset checksum, split statistics,
+training duration, and validation/test metrics.
+
+### First reproducible baseline
+
+The initial annotation-free Logistic Regression uses only normalized allele
+properties—no gene identity, ClinVar assertions, or external pathogenicity
+scores. Results are held-out test metrics from the verified ClinVar snapshot.
+
+| Dataset | Split | ROC-AUC | PR-AUC | MCC | F1 |
+|---|---|---:|---:|---:|---:|
+| A | Random | 0.7522 | 0.5342 | 0.3484 | 0.4796 |
+| A | Gene-aware | 0.7507 | 0.5352 | 0.3515 | 0.4813 |
+| B, high confidence | Random | 0.7203 | 0.5420 | 0.3005 | 0.4717 |
+| B, high confidence | Gene-aware | 0.7005 | 0.5295 | 0.2861 | 0.4547 |
+
+These measurements establish the lower bound for subsequent annotated models;
+they are not presented as calibrated clinical probabilities. The
+[complete baseline report](reports/tables/baseline_results.md) includes the
+dummy baseline, all classification and probability metrics, split sizes, and
+interpretation.
+
 Start the API locally:
 
 ```bash

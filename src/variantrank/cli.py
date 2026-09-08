@@ -15,6 +15,7 @@ from variantrank.data import (
 )
 from variantrank.data.clinvar import DEFAULT_CLINVAR_MD5_URL, DEFAULT_CLINVAR_URL
 from variantrank.data.download import ChecksumError, download_file, fetch_published_md5
+from variantrank.models import run_baseline_experiment
 
 logger = logging.getLogger(__name__)
 
@@ -138,6 +139,61 @@ def prepare_data_command(
     )
     typer.echo(f"Data: {result.dataset_a}")
     typer.echo(f"QC: {result.qc_report}")
+
+
+@app.command("train")
+def train_command(
+    dataset: Annotated[
+        Path,
+        typer.Option(
+            exists=True,
+            dir_okay=False,
+            readable=True,
+            help="Curated ClinVar Parquet dataset.",
+        ),
+    ] = Path("data/processed/clinvar.parquet"),
+    artifact_dir: Annotated[
+        Path,
+        typer.Option(help="Root directory for models, metrics, and metadata."),
+    ] = Path("artifacts/models/baselines"),
+    strategy: Annotated[
+        str,
+        typer.Option(help="Validation strategy: random, gene, or both."),
+    ] = "both",
+    random_seed: Annotated[int, typer.Option(help="Reproducible random seed.")] = 42,
+    max_rows: Annotated[
+        int | None,
+        typer.Option(min=100, help="Optional stratified development sample."),
+    ] = None,
+) -> None:
+    """Train Dummy and Logistic Regression baselines."""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+    if strategy not in {"random", "gene", "both"}:
+        logger.error("Unknown validation strategy %r", strategy)
+        raise typer.Exit(code=2)
+    strategies = ["random", "gene"] if strategy == "both" else [strategy]
+
+    try:
+        for selected_strategy in strategies:
+            logger.info("Training %s baselines on %s", selected_strategy, dataset)
+            result = run_baseline_experiment(
+                dataset,
+                artifact_dir,
+                strategy=selected_strategy,  # type: ignore[arg-type]
+                random_seed=random_seed,
+                max_rows=max_rows,
+            )
+            typer.echo(f"\n{selected_strategy} test metrics")
+            for model_name, partitions in result.metrics.items():
+                metrics = partitions["test"]
+                typer.echo(
+                    f"{model_name:>20}: ROC-AUC={metrics['roc_auc']:.4f} "
+                    f"PR-AUC={metrics['pr_auc']:.4f} MCC={metrics['mcc']:.4f}"
+                )
+            typer.echo(f"Artifacts: {result.artifact_dir}")
+    except (OSError, ValueError) as error:
+        logger.error("Baseline training failed: %s", error)
+        raise typer.Exit(code=2) from error
 
 
 if __name__ == "__main__":  # pragma: no cover

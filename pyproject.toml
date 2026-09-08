@@ -26,6 +26,7 @@ dependencies = [
   "pandas>=2.2,<4",
   "pyarrow>=18,<24",
   "pydantic>=2.10,<3",
+  "scikit-learn>=1.6,<2",
   "typer>=0.15,<1",
   "uvicorn[standard]>=0.34,<1",
 ]
@@ -71,3 +72,7 @@ select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
 python_version = "3.12"
 strict = true
 packages = ["variantrank"]
+
+[[tool.mypy.overrides]]
+module = ["joblib", "sklearn.*"]
+ignore_missing_imports = true
