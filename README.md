@@ -113,6 +113,22 @@ Valid VCF: 2 records, 3 alleles
 Chromosomes: 13, 17
 ```
 
+Build reproducible GRCh38 training labels from the current ClinVar release:
+
+```bash
+uv run variantrank prepare-data
+```
+
+The command verifies the NCBI checksum and writes Dataset A, the high-confidence
+Dataset B, QC counters, and source provenance to `data/processed/`. The complete
+curation policy is documented in the
+[ClinVar training data contract](docs/data-contract.md).
+
+The verified 2026-09-08 snapshot produced 1,633,976 unique GRCh38 SNV/indel
+labels in Dataset A and 373,073 high-confidence labels in Dataset B. See the
+[dataset build summary](reports/tables/clinvar_dataset_summary.md) for checksums,
+class distributions, and filtering counts.
+
 Start the API locally:
 
 ```bash

@@ -1,4 +1,4 @@
-.PHONY: install format lint typecheck test check api docker
+.PHONY: install format lint typecheck test check prepare-data api docker
 
 install:
 	uv sync --all-extras
@@ -18,6 +18,9 @@ test:
 	uv run pytest --cov=src/variantrank --cov-report=term-missing
 
 check: lint typecheck test
+
+prepare-data:
+	uv run variantrank prepare-data
 
 api:
 	uv run uvicorn variantrank.api.app:app --reload

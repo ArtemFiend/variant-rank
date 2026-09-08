@@ -1,0 +1,13 @@
+#AlleleID	Type	GeneSymbol	ClinicalSignificance	LastEvaluated	PhenotypeList	Assembly	Chromosome	ReviewStatus	NumberSubmitters	VariationID	PositionVCF	ReferenceAlleleVCF	AlternateAlleleVCF
+10	single nucleotide variant	GENE1	Pathogenic	Jan 01, 2022	Condition A	GRCh38	chr1	criteria provided, single submitter	1	1000	100	A	G
+11	single nucleotide variant	GENE1	Likely pathogenic	Feb 02, 2024	Condition A	GRCh38	1	reviewed by expert panel	5	1001	100	A	G
+20	single nucleotide variant	GENE2	Benign/Likely benign	Mar 03, 2023	Condition B	GRCh38	2	criteria provided, multiple submitters, no conflicts	3	2000	200	C	T
+30	single nucleotide variant	GENE3	Uncertain significance	Apr 04, 2024	Condition C	GRCh38	3	criteria provided, single submitter	1	3000	250	G	C
+40	single nucleotide variant	GENE4	Pathogenic	May 05, 2024	Condition D	GRCh37	4	reviewed by expert panel	4	4000	400	T	C
+50	Deletion	GENE5	Pathogenic	Jun 06, 2024	Condition E	GRCh38	5	criteria provided, single submitter	1	5000	na	AT	A
+60	single nucleotide variant	GENE6	Pathogenic	Jul 07, 2024	Condition F	GRCh38	6	criteria provided, single submitter	1	6000	600	G	A
+61	single nucleotide variant	GENE6	Benign	Aug 08, 2024	Condition F	GRCh38	6	reviewed by expert panel	4	6001	600	G	A
+70	single nucleotide variant	GENE7	Pathogenic; risk factor	Sep 09, 2024	Condition G	GRCh38	7	criteria provided, single submitter	1	7000	700	A	C
+80	single nucleotide variant	GENE8	Likely benign	Oct 10, 2024	-	GRCh38	chr4	practice guideline	2	8000	400	AAC	AAT
+90	Duplication	GENE9	Pathogenic	Nov 11, 2024	Condition H	GRCh38	9	reviewed by expert panel	3	9000	900	A	AT
+100	single nucleotide variant	GENE10	Benign	Dec 12, 2024	Condition I	GRCh38	Un	criteria provided, single submitter	1	10000	1000	C	T

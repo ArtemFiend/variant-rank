@@ -23,6 +23,8 @@ classifiers = [
 ]
 dependencies = [
   "fastapi>=0.115,<1",
+  "pandas>=2.2,<4",
+  "pyarrow>=18,<24",
   "pydantic>=2.10,<3",
   "typer>=0.15,<1",
   "uvicorn[standard]>=0.34,<1",
@@ -32,6 +34,7 @@ dependencies = [
 dev = [
   "httpx>=0.28,<1",
   "mypy>=1.15,<2",
+  "pandas-stubs>=2.2,<4",
   "pre-commit>=4,<5",
   "pytest>=8.3,<9",
   "pytest-cov>=6,<8",

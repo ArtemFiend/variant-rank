@@ -1,8 +1,11 @@
 dataset:
   source: clinvar
+  url: https://ftp.ncbi.nlm.nih.gov/pub/clinvar/tab_delimited/variant_summary.txt.gz
+  checksum_url: https://ftp.ncbi.nlm.nih.gov/pub/clinvar/tab_delimited/variant_summary.txt.gz.md5
   assembly: GRCh38
   high_confidence_only: false
   exclude_ambiguous_labels: true
+  chunk_size: 100000
 
 normalization:
   chromosome_prefix: false

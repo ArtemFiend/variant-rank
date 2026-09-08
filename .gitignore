@@ -38,6 +38,7 @@ data/external/*
 artifacts/*
 reports/figures/*
 reports/tables/*
+!reports/tables/*.md
 
 # Keep directory placeholders
 !.gitkeep
