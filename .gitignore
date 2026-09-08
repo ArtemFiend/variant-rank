@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
+.pre-commit-cache/
 .mypy_cache/
 .ruff_cache/
 .coverage
@@ -10,6 +11,7 @@ htmlcov/
 
 # Virtual environments
 .venv/
+.uv-cache/
 venv/
 env/
 

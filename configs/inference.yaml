@@ -1,0 +1,6 @@
+model_dir: artifacts/models/latest
+batch_size: 1000
+threshold: from_artifact
+outputs:
+  - csv
+  - json

@@ -1,0 +1,10 @@
+dataset:
+  source: clinvar
+  assembly: GRCh38
+  high_confidence_only: false
+  exclude_ambiguous_labels: true
+
+normalization:
+  chromosome_prefix: false
+  minimal_representation: true
+  left_align_indels: true

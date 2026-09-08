@@ -1,0 +1,11 @@
+random_seed: 42
+
+validation:
+  strategy: gene_group
+  folds: 5
+
+model:
+  type: catboost
+  iterations: 1000
+  depth: 7
+  learning_rate: 0.05

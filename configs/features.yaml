@@ -1,0 +1,8 @@
+feature_sets:
+  basic:
+    - variant_type
+    - consequence
+    - impact
+    - allele_frequency
+  population: []
+  pathogenicity_scores: []
