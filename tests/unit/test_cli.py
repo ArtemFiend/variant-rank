@@ -2,6 +2,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
+import variantrank.cli
 from variantrank.cli import app
 
 FIXTURE = Path(__file__).parents[1] / "fixtures" / "example.vcf"
@@ -44,3 +45,18 @@ def test_prepare_data_command_with_local_source(tmp_path: Path) -> None:
     assert "Dataset B: 3 high-confidence variants" in result.stdout
     assert (output_dir / "clinvar.parquet").is_file()
     assert (output_dir / "clinvar_qc.json").is_file()
+
+
+def test_annotate_vcf_command(monkeypatch, tmp_path: Path) -> None:
+    annotations = tmp_path / "example.vep.parquet"
+    metadata = tmp_path / "example.vep.metadata.json"
+
+    def fake_annotate(*_args, **_kwargs):
+        return annotations, metadata
+
+    monkeypatch.setattr(variantrank.cli, "annotate_vcf", fake_annotate)
+    result = runner.invoke(app, ["annotate-vcf", str(FIXTURE), "--output-dir", str(tmp_path)])
+
+    assert result.exit_code == 0
+    assert str(annotations) in result.stdout
+    assert str(metadata) in result.stdout

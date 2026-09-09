@@ -1,0 +1,38 @@
+[
+  {
+    "input": "17 7674220 17:7674220:C:T C T . . .",
+    "seq_region_name": "17",
+    "start": 7674220,
+    "colocated_variants": [
+      {
+        "id": "rs121912651",
+        "frequencies": {
+          "T": {
+            "af": 0.00002,
+            "gnomade": 0.00001,
+            "gnomade_afr": 0.00003,
+            "gnomade_nfe": 0.00001
+          }
+        }
+      }
+    ],
+    "transcript_consequences": [
+      {
+        "amino_acids": "R/H",
+        "biotype": "protein_coding",
+        "canonical": 1,
+        "codons": "cGc/cAc",
+        "consequence_terms": ["missense_variant"],
+        "exon": "8/11",
+        "gene_id": "ENSG00000141510",
+        "gene_symbol": "TP53",
+        "impact": "MODERATE",
+        "mane_select": "ENST00000269305.9",
+        "pick": 1,
+        "protein_start": 273,
+        "transcript_id": "ENST00000269305",
+        "variant_allele": "T"
+      }
+    ]
+  }
+]

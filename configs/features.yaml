@@ -1,8 +1,41 @@
 feature_sets:
   basic:
+    - chrom
     - variant_type
+    - substitution
+    - ref_length
+    - alt_length
+    - length_delta
+    - absolute_length_delta
+    - is_snv
+    - is_indel
+    - is_insertion
+    - is_deletion
+    - is_transition
+    - is_transversion
+    - ref_gc_fraction
+    - alt_gc_fraction
+  functional:
     - consequence
     - impact
+    - biotype
+    - protein_position
+    - canonical
+    - mane_select_flag
+    - is_missense
+    - is_synonymous
+    - is_stop_gained
+    - is_frameshift
+    - is_splice
+    - is_start_lost
+    - is_stop_lost
+  population:
     - allele_frequency
-  population: []
+    - population_max_af
+    - afr_af
+    - amr_af
+    - eas_af
+    - nfe_af
+    - sas_af
+    - rare_variant_flag
   pathogenicity_scores: []

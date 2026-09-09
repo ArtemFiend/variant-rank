@@ -7,6 +7,7 @@ from typing import Annotated
 import typer
 
 from variantrank import __version__
+from variantrank.annotation import VEPClient, VEPRequestError, annotate_vcf
 from variantrank.data import (
     ClinVarSchemaError,
     VCFFormatError,
@@ -59,6 +60,41 @@ def validate_vcf_command(
     chromosomes = ", ".join(summary.chromosomes) or "none"
     typer.echo(f"Valid VCF: {summary.records} records, {summary.alleles} alleles")
     typer.echo(f"Chromosomes: {chromosomes}")
+
+
+@app.command("annotate-vcf")
+def annotate_vcf_command(
+    input_path: Annotated[
+        Path,
+        typer.Argument(exists=True, dir_okay=False, readable=True, help="GRCh38 VCF file."),
+    ],
+    output_dir: Annotated[
+        Path,
+        typer.Option(help="Directory for annotation Parquet and provenance metadata."),
+    ] = Path("data/annotated"),
+    batch_size: Annotated[
+        int,
+        typer.Option(min=1, max=200, help="Variants per Ensembl REST request."),
+    ] = 200,
+    server: Annotated[
+        str,
+        typer.Option(help="Ensembl REST server URL."),
+    ] = "https://rest.ensembl.org",
+) -> None:
+    """Annotate a small VCF through the Ensembl VEP REST service."""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+    try:
+        annotations, metadata = annotate_vcf(
+            input_path,
+            output_dir,
+            client=VEPClient(server=server, batch_size=batch_size),
+        )
+    except (OSError, ValueError, VEPRequestError, VCFFormatError) as error:
+        logger.error("VEP annotation failed: %s", error)
+        raise typer.Exit(code=2) from error
+
+    typer.echo(f"Annotations: {annotations}")
+    typer.echo(f"Metadata: {metadata}")
 
 
 @app.command("prepare-data")

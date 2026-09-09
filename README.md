@@ -113,6 +113,19 @@ Valid VCF: 2 records, 3 alleles
 Chromosomes: 13, 17
 ```
 
+Annotate a small GRCh38 VCF through Ensembl VEP:
+
+```bash
+uv run variantrank annotate-vcf tests/fixtures/example.vcf
+```
+
+The command batches requests, selects a reproducible transcript annotation, and
+writes flattened functional and population features to Parquet with adjacent
+provenance metadata. See the
+[VEP annotation contract](docs/annotation-contract.md) for the schema and
+execution boundaries. Dataset-scale jobs use a local VEP cache rather than the
+public REST service.
+
 Build reproducible GRCh38 training labels from the current ClinVar release:
 
 ```bash

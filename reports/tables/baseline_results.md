@@ -1,8 +1,8 @@
 # Annotation-free baseline results
 
-Evaluation date: 2026-09-08  
-Genome assembly: GRCh38  
-Random seed: 42  
+Evaluation date: 2026-09-08
+Genome assembly: GRCh38
+Random seed: 42
 Feature set: `basic_variant_v1`
 
 ## Scope

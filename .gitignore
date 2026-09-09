@@ -34,6 +34,7 @@ dist/
 data/raw/*
 data/interim/*
 data/processed/*
+data/annotated/*
 data/external/*
 artifacts/*
 reports/figures/*
