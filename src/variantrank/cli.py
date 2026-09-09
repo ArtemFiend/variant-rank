@@ -7,7 +7,18 @@ from typing import Annotated
 import typer
 
 from variantrank import __version__
-from variantrank.annotation import VEPClient, VEPRequestError, annotate_vcf
+from variantrank.annotation import (
+    DEFAULT_CACHE_VERSION,
+    DEFAULT_VEP_IMAGE,
+    LocalVEPConfig,
+    LocalVEPError,
+    VEPClient,
+    VEPRequestError,
+    annotate_vcf,
+    export_vep_input,
+    format_command,
+    run_local_vep,
+)
 from variantrank.data import (
     ClinVarSchemaError,
     VCFFormatError,
@@ -95,6 +106,100 @@ def annotate_vcf_command(
 
     typer.echo(f"Annotations: {annotations}")
     typer.echo(f"Metadata: {metadata}")
+
+
+@app.command("export-vep-input")
+def export_vep_input_command(
+    dataset: Annotated[
+        Path,
+        typer.Argument(exists=True, dir_okay=False, readable=True, help="Curated Parquet dataset."),
+    ] = Path("data/processed/clinvar.parquet"),
+    output_path: Annotated[
+        Path,
+        typer.Option(help="Destination VCF or VCF.GZ file."),
+    ] = Path("data/interim/clinvar.vep.vcf.gz"),
+    batch_size: Annotated[
+        int,
+        typer.Option(min=1, help="Parquet rows converted per streaming batch."),
+    ] = 100_000,
+    force: Annotated[bool, typer.Option(help="Replace a matching cached export.")] = False,
+) -> None:
+    """Stream a curated training dataset into VEP-compatible VCF."""
+    try:
+        result = export_vep_input(
+            dataset,
+            output_path,
+            batch_size=batch_size,
+            force=force,
+        )
+    except (OSError, ValueError) as error:
+        logger.error("VEP input export failed: %s", error)
+        raise typer.Exit(code=2) from error
+    status = "already current" if result.cached else "written"
+    typer.echo(f"VEP input {status}: {result.output} ({result.rows:,} variants)")
+    typer.echo(f"Manifest: {result.manifest}")
+
+
+@app.command("annotate-local")
+def annotate_local_command(
+    input_path: Annotated[
+        Path,
+        typer.Argument(exists=True, dir_okay=False, readable=True, help="GRCh38 VCF or VCF.GZ."),
+    ],
+    output_path: Annotated[
+        Path,
+        typer.Option(help="VEP JSON Lines output file."),
+    ] = Path("data/annotated/vep.jsonl"),
+    cache_dir: Annotated[
+        Path,
+        typer.Option(help="Host directory containing the Ensembl VEP cache."),
+    ] = Path("data/external/vep"),
+    image: Annotated[
+        str, typer.Option(help="Pinned Ensembl VEP Docker image.")
+    ] = DEFAULT_VEP_IMAGE,
+    cache_version: Annotated[
+        int,
+        typer.Option(min=1, help="Ensembl cache release matching the VEP image."),
+    ] = DEFAULT_CACHE_VERSION,
+    forks: Annotated[int, typer.Option(min=1, help="Parallel VEP worker processes.")] = 4,
+    fasta: Annotated[
+        Path | None,
+        typer.Option(
+            exists=True, dir_okay=False, readable=True, help="Optional indexed GRCh38 FASTA."
+        ),
+    ] = None,
+    force: Annotated[bool, typer.Option(help="Ignore a matching annotation manifest.")] = False,
+    dry_run: Annotated[
+        bool, typer.Option(help="Print the Docker command without executing it.")
+    ] = False,
+) -> None:
+    """Run pinned Ensembl VEP offline with cache-aware provenance."""
+    config = LocalVEPConfig(
+        cache_dir=cache_dir,
+        image=image,
+        cache_version=cache_version,
+        forks=forks,
+        fasta=fasta,
+    )
+    try:
+        result = run_local_vep(
+            input_path,
+            output_path,
+            config,
+            force=force,
+            dry_run=dry_run,
+        )
+    except (OSError, ValueError, LocalVEPError) as error:
+        logger.error("Local VEP annotation failed: %s", error)
+        raise typer.Exit(code=2) from error
+
+    if dry_run:
+        typer.echo(format_command(result.command))
+    elif result.cached:
+        typer.echo(f"Annotations already current: {result.output}")
+    else:
+        typer.echo(f"Annotations: {result.output}")
+        typer.echo(f"Manifest: {result.manifest}")
 
 
 @app.command("prepare-data")

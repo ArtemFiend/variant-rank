@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pandas as pd
 from typer.testing import CliRunner
 
 import variantrank.cli
@@ -60,3 +61,39 @@ def test_annotate_vcf_command(monkeypatch, tmp_path: Path) -> None:
     assert result.exit_code == 0
     assert str(annotations) in result.stdout
     assert str(metadata) in result.stdout
+
+
+def test_annotate_local_dry_run_command(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        [
+            "annotate-local",
+            str(FIXTURE),
+            "--output-path",
+            str(tmp_path / "vep.jsonl"),
+            "--cache-dir",
+            str(tmp_path / "cache"),
+            "--dry-run",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "docker run" in result.stdout
+    assert "--offline" in result.stdout
+
+
+def test_export_vep_input_command(tmp_path: Path) -> None:
+    dataset = tmp_path / "variants.parquet"
+    output = tmp_path / "variants.vcf.gz"
+    pd.DataFrame({"chrom": ["1"], "pos": [100], "ref": ["A"], "alt": ["G"]}).to_parquet(
+        dataset, index=False
+    )
+
+    result = runner.invoke(
+        app,
+        ["export-vep-input", str(dataset), "--output-path", str(output)],
+    )
+
+    assert result.exit_code == 0
+    assert "1 variants" in result.stdout
+    assert output.is_file()

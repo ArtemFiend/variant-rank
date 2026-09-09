@@ -11,3 +11,11 @@ normalization:
   chromosome_prefix: false
   minimal_representation: true
   left_align_indels: true
+
+annotation:
+  assembly: GRCh38
+  cache_dir: data/external/vep
+  cache_version: 116
+  docker_image: ensemblorg/ensembl-vep:release_116.1
+  forks: 4
+  rest_batch_size: 200

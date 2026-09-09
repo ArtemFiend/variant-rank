@@ -126,6 +126,17 @@ provenance metadata. See the
 execution boundaries. Dataset-scale jobs use a local VEP cache rather than the
 public REST service.
 
+Preview the pinned offline Docker workflow:
+
+```bash
+uv run variantrank export-vep-input
+uv run variantrank annotate-local tests/fixtures/example.vcf --dry-run
+```
+
+The offline runner validates checksums and reuses an existing annotation only
+when its sidecar manifest matches the input, VEP image, cache release, and
+runtime options.
+
 Build reproducible GRCh38 training labels from the current ClinVar release:
 
 ```bash

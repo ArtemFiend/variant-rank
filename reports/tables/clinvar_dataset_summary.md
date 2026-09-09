@@ -25,6 +25,22 @@ Source: [NCBI ClinVar `variant_summary.txt.gz`](https://ftp.ncbi.nlm.nih.gov/pub
 Dataset B retains review statuses `criteria provided, multiple submitters, no
 conflicts`, `reviewed by expert panel`, and `practice guideline`.
 
+## VEP input export
+
+Dataset A was streamed to a compressed GRCh38 VCF for offline annotation.
+
+| Property | Value |
+|---|---|
+| Variants | 1,633,976 |
+| Compressed size | 16,091,000 bytes |
+| Source Parquet SHA-256 | `27a44446962bc49cdaa40fca89add23f6872645ffff09100162b819164fd0830` |
+| VCF.GZ SHA-256 | `86adcef8c57ab9c8cce23dad75b3cc318e488fe5ecadb2ba62b40ecc8300ddec` |
+| Variant ID encoding | URL-safe Base64 of `chrom:pos:ref:alt` |
+
+The generated VCF and manifest remain untracked data artifacts. They can be
+recreated with `uv run variantrank export-vep-input`; a repeated invocation
+returns a checksum-validated cache hit.
+
 ## Filtering audit
 
 | Stage | Rows removed |

@@ -10,10 +10,62 @@ VCF inference stages.
 | Mode | Intended workload | Interface |
 |---|---|---|
 | Ensembl REST | Small VCF files and integration checks | `variantrank annotate-vcf` |
-| Local VEP cache | Dataset-scale annotation | Planned batch runner |
+| Local VEP cache | Dataset-scale annotation | `variantrank annotate-local` |
 
 The public REST service is deliberately limited to batches of at most 200
 variants. It is not used to annotate the full ClinVar training snapshot.
+
+## Offline VEP execution
+
+The local runner uses the pinned multi-architecture image
+`ensemblorg/ensembl-vep:release_116.1` with the matching Ensembl release 116
+GRCh38 cache. The cache is external data and is not stored in Git.
+
+Install the cache and reference FASTA once:
+
+```bash
+mkdir -p data/external/vep
+docker run --rm -it \
+  -v "$PWD/data/external/vep:/data" \
+  ensemblorg/ensembl-vep:release_116.1 \
+  INSTALL.pl -c /data -a cf -s homo_sapiens -y GRCh38
+```
+
+Export the curated ClinVar Parquet to a streaming, compressed VCF without
+loading the full dataset into memory:
+
+```bash
+uv run variantrank export-vep-input
+```
+
+Variant IDs are URL-safe Base64 encodings of the canonical variant key. This
+avoids VEP parser ambiguity while keeping every annotation join reversible.
+The export is written atomically and reused only when its own checksum and the
+source Parquet checksum match the sidecar manifest.
+
+Preview the exact offline command without requiring the cache:
+
+```bash
+uv run variantrank annotate-local tests/fixtures/example.vcf --dry-run
+```
+
+Run annotation after the cache is installed:
+
+```bash
+uv run variantrank annotate-local tests/fixtures/example.vcf \
+  --cache-dir data/external/vep \
+  --output-path data/annotated/example.vep.jsonl
+```
+
+For the full Dataset A export, pass
+`data/interim/clinvar.vep.vcf.gz` as the input instead of the fixture.
+
+The runner writes to a partial file, promotes it only after a successful VEP
+exit, and stores a sidecar manifest containing the input/output checksums,
+container image, cache version, full argv, runtime, and annotation options. A
+subsequent invocation is skipped only when the input checksum, configuration,
+output checksum, and manifest all match. `--force` explicitly bypasses this
+cache check.
 
 ## Output schema
 

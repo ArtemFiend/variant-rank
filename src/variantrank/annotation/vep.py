@@ -1,5 +1,6 @@
 """Ensembl VEP REST adapter for small inference batches."""
 
+import base64
 import json
 import time
 from collections.abc import Callable, Iterable, Mapping, Sequence
@@ -163,6 +164,24 @@ def parse_vep_response(payload: Iterable[Mapping[str, Any]]) -> list[VEPAnnotati
     return annotations
 
 
+def encode_variant_identifier(variant_key: str) -> str:
+    """Encode a canonical variant key as a VCF-safe, reversible identifier."""
+    encoded = base64.urlsafe_b64encode(variant_key.encode()).decode().rstrip("=")
+    return f"vr_{encoded}"
+
+
+def decode_variant_identifier(identifier: str) -> str:
+    """Decode an identifier produced by :func:`encode_variant_identifier`."""
+    if not identifier.startswith("vr_"):
+        return identifier
+    encoded = identifier.removeprefix("vr_")
+    padding = "=" * (-len(encoded) % 4)
+    try:
+        return base64.urlsafe_b64decode(encoded + padding).decode()
+    except (ValueError, UnicodeDecodeError) as error:
+        raise VEPRequestError(f"invalid encoded variant identifier {identifier!r}") from error
+
+
 def annotate_vcf(
     source: Path,
     output_dir: Path,
@@ -233,7 +252,7 @@ def _as_vcf_record(variant: Variant, identifier: str) -> str:
 def _variant_key(result: Mapping[str, Any]) -> str:
     fields = str(result.get("input", "")).split()
     if len(fields) >= 3 and fields[2] not in {"", "."}:
-        return fields[2]
+        return decode_variant_identifier(fields[2])
     raise VEPRequestError("VEP response has no input variant identifier")
 
 
