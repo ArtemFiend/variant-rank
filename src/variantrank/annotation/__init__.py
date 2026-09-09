@@ -10,6 +10,7 @@ from variantrank.annotation.local_vep import (
     format_command,
     run_local_vep,
 )
+from variantrank.annotation.output import VEPOutputResult, convert_vep_output
 from variantrank.annotation.vep import (
     VEPAnnotation,
     VEPClient,
@@ -29,8 +30,10 @@ __all__ = [
     "VEPAnnotation",
     "VEPClient",
     "VEPInputResult",
+    "VEPOutputResult",
     "VEPRequestError",
     "annotate_vcf",
+    "convert_vep_output",
     "decode_variant_identifier",
     "encode_variant_identifier",
     "export_vep_input",

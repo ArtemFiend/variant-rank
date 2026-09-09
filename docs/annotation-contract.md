@@ -60,6 +60,17 @@ uv run variantrank annotate-local tests/fixtures/example.vcf \
 For the full Dataset A export, pass
 `data/interim/clinvar.vep.vcf.gz` as the input instead of the fixture.
 
+Convert the raw line-delimited VEP JSON to the typed annotation contract:
+
+```bash
+uv run variantrank parse-vep-output data/annotated/vep.jsonl
+```
+
+The parser streams JSON records into compressed Parquet row groups, restores
+canonical variant keys from the safe VCF identifiers, preserves missing
+frequency values, and writes its own checksum manifest. Malformed JSON or an
+empty annotation result never replaces a previously valid Parquet output.
+
 The runner writes to a partial file, promotes it only after a successful VEP
 exit, and stores a sidecar manifest containing the input/output checksums,
 container image, cache version, full argv, runtime, and annotation options. A

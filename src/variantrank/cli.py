@@ -15,6 +15,7 @@ from variantrank.annotation import (
     VEPClient,
     VEPRequestError,
     annotate_vcf,
+    convert_vep_output,
     export_vep_input,
     format_command,
     run_local_vep,
@@ -200,6 +201,38 @@ def annotate_local_command(
     else:
         typer.echo(f"Annotations: {result.output}")
         typer.echo(f"Manifest: {result.manifest}")
+
+
+@app.command("parse-vep-output")
+def parse_vep_output_command(
+    input_path: Annotated[
+        Path,
+        typer.Argument(exists=True, dir_okay=False, readable=True, help="VEP JSON Lines file."),
+    ],
+    output_path: Annotated[
+        Path,
+        typer.Option(help="Typed annotation Parquet output."),
+    ] = Path("data/annotated/clinvar.vep.parquet"),
+    batch_size: Annotated[
+        int,
+        typer.Option(min=1, help="Annotations converted per Parquet row group."),
+    ] = 50_000,
+    force: Annotated[bool, typer.Option(help="Replace a matching cached conversion.")] = False,
+) -> None:
+    """Convert raw local VEP JSON into the stable annotation contract."""
+    try:
+        result = convert_vep_output(
+            input_path,
+            output_path,
+            batch_size=batch_size,
+            force=force,
+        )
+    except (OSError, ValueError, VEPRequestError) as error:
+        logger.error("VEP output conversion failed: %s", error)
+        raise typer.Exit(code=2) from error
+    status = "already current" if result.cached else "written"
+    typer.echo(f"Annotation dataset {status}: {result.output} ({result.rows:,} variants)")
+    typer.echo(f"Manifest: {result.manifest}")
 
 
 @app.command("prepare-data")

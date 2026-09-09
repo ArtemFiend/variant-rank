@@ -137,6 +137,12 @@ The offline runner validates checksums and reuses an existing annotation only
 when its sidecar manifest matches the input, VEP image, cache release, and
 runtime options.
 
+Raw offline JSON is converted to the shared typed Parquet contract with:
+
+```bash
+uv run variantrank parse-vep-output data/annotated/vep.jsonl
+```
+
 Build reproducible GRCh38 training labels from the current ClinVar release:
 
 ```bash

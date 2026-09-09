@@ -1,4 +1,4 @@
-.PHONY: install format lint typecheck test check prepare-data export-vep-input annotate annotate-local train api docker
+.PHONY: install format lint typecheck test check prepare-data export-vep-input annotate annotate-local parse-vep-output train api docker
 
 install:
 	uv sync --all-extras
@@ -30,6 +30,9 @@ annotate:
 
 annotate-local:
 	uv run variantrank annotate-local tests/fixtures/example.vcf --dry-run
+
+parse-vep-output:
+	uv run variantrank parse-vep-output data/annotated/vep.jsonl
 
 train:
 	uv run variantrank train --strategy both

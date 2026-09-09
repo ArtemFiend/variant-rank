@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -92,6 +93,22 @@ def test_export_vep_input_command(tmp_path: Path) -> None:
     result = runner.invoke(
         app,
         ["export-vep-input", str(dataset), "--output-path", str(output)],
+    )
+
+    assert result.exit_code == 0
+    assert "1 variants" in result.stdout
+    assert output.is_file()
+
+
+def test_parse_vep_output_command(tmp_path: Path) -> None:
+    payload = json.loads((FIXTURE.parent / "vep_response.json").read_text())[0]
+    source = tmp_path / "vep.jsonl"
+    output = tmp_path / "annotations.parquet"
+    source.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        ["parse-vep-output", str(source), "--output-path", str(output)],
     )
 
     assert result.exit_code == 0
