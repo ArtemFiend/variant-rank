@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pandas as pd
 from typer.testing import CliRunner
@@ -115,3 +116,36 @@ def test_parse_vep_output_command(tmp_path: Path) -> None:
     assert result.exit_code == 0
     assert "1 variants" in result.stdout
     assert output.is_file()
+
+
+def test_build_features_command(monkeypatch, tmp_path: Path) -> None:
+    labels = tmp_path / "labels.parquet"
+    annotations = tmp_path / "annotations.parquet"
+    output = tmp_path / "features.parquet"
+    labels.touch()
+    annotations.touch()
+
+    def fake_build(*_args, **_kwargs):
+        return SimpleNamespace(
+            output=output,
+            manifest=output.with_suffix(".parquet.manifest.json"),
+            rows=2,
+            cached=False,
+        )
+
+    monkeypatch.setattr(variantrank.cli, "build_feature_dataset", fake_build)
+    result = runner.invoke(
+        app,
+        [
+            "build-features",
+            "--labels",
+            str(labels),
+            "--annotations",
+            str(annotations),
+            "--output-path",
+            str(output),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "2 variants" in result.stdout

@@ -1,4 +1,4 @@
-.PHONY: install format lint typecheck test check prepare-data export-vep-input annotate annotate-local parse-vep-output train api docker
+.PHONY: install format lint typecheck test check prepare-data export-vep-input annotate annotate-local parse-vep-output build-features train api docker
 
 install:
 	uv sync --all-extras
@@ -33,6 +33,9 @@ annotate-local:
 
 parse-vep-output:
 	uv run variantrank parse-vep-output data/annotated/vep.tsv
+
+build-features:
+	uv run variantrank build-features
 
 train:
 	uv run variantrank train --strategy both

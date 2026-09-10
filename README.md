@@ -146,6 +146,17 @@ Compact offline TSV is converted to the shared typed Parquet contract with:
 uv run variantrank parse-vep-output data/annotated/vep.tsv
 ```
 
+Build the versioned, leakage-safe training matrix after annotation:
+
+```bash
+uv run variantrank build-features
+```
+
+The join requires complete one-to-one annotation coverage and excludes all
+ClinVar-derived label metadata from model inputs. See the
+[model-ready feature contract](docs/feature-contract.md) and the verified
+[feature dataset summary](reports/tables/feature_dataset_summary.md).
+
 The pinned local environment and end-to-end smoke test are recorded in the
 [VEP environment report](reports/tables/vep_environment_summary.md), including
 the explicit leakage boundary that removes ClinVar-derived co-located metadata.
@@ -362,6 +373,7 @@ variant-rank/
 | Docker image and GitHub Actions workflows | Available |
 | ClinVar curation and versioned Parquet dataset | Available |
 | VEP and population annotation | Available |
+| Leakage-safe model-ready feature dataset | Available |
 | Model comparison and gene-aware validation | Scheduled |
 | Calibration, SHAP, ranked inference and reports | Scheduled |
 

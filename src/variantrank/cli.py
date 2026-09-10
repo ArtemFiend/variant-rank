@@ -28,6 +28,7 @@ from variantrank.data import (
 )
 from variantrank.data.clinvar import DEFAULT_CLINVAR_MD5_URL, DEFAULT_CLINVAR_URL
 from variantrank.data.download import ChecksumError, download_file, fetch_published_md5
+from variantrank.features import FeatureDatasetError, build_feature_dataset
 from variantrank.models import run_baseline_experiment
 
 logger = logging.getLogger(__name__)
@@ -315,6 +316,38 @@ def prepare_data_command(
     )
     typer.echo(f"Data: {result.dataset_a}")
     typer.echo(f"QC: {result.qc_report}")
+
+
+@app.command("build-features")
+def build_features_command(
+    labels: Annotated[
+        Path,
+        typer.Option(exists=True, dir_okay=False, readable=True, help="Curated label Parquet."),
+    ] = Path("data/processed/clinvar.parquet"),
+    annotations: Annotated[
+        Path,
+        typer.Option(
+            exists=True,
+            dir_okay=False,
+            readable=True,
+            help="Typed VEP annotation Parquet.",
+        ),
+    ] = Path("data/annotated/clinvar.vep.parquet"),
+    output_path: Annotated[
+        Path,
+        typer.Option(help="Destination model-ready Parquet dataset."),
+    ] = Path("data/features/clinvar.features.parquet"),
+    force: Annotated[bool, typer.Option(help="Replace a matching cached feature dataset.")] = False,
+) -> None:
+    """Build the leakage-safe model-ready feature dataset."""
+    try:
+        result = build_feature_dataset(labels, annotations, output_path, force=force)
+    except (FeatureDatasetError, OSError, ValueError) as error:
+        logger.error("Feature dataset build failed: %s", error)
+        raise typer.Exit(code=2) from error
+    status = "already current" if result.cached else "written"
+    typer.echo(f"Feature dataset {status}: {result.output} ({result.rows:,} variants)")
+    typer.echo(f"Manifest: {result.manifest}")
 
 
 @app.command("train")

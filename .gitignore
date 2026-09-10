@@ -35,6 +35,7 @@ data/raw/*
 data/interim/*
 data/processed/*
 data/annotated/*
+data/features/*
 data/external/*
 artifacts/*
 reports/figures/*
