@@ -22,6 +22,7 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
+  "catboost>=1.2.8,<2",
   "fastapi>=0.115,<1",
   "pandas>=2.2,<4",
   "pyarrow>=18,<24",
@@ -74,5 +75,5 @@ strict = true
 packages = ["variantrank"]
 
 [[tool.mypy.overrides]]
-module = ["joblib", "pyarrow.*", "sklearn.*"]
+module = ["catboost", "joblib", "pyarrow.*", "sklearn.*"]
 ignore_missing_imports = true

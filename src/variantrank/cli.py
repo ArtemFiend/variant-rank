@@ -29,7 +29,7 @@ from variantrank.data import (
 from variantrank.data.clinvar import DEFAULT_CLINVAR_MD5_URL, DEFAULT_CLINVAR_URL
 from variantrank.data.download import ChecksumError, download_file, fetch_published_md5
 from variantrank.features import FeatureDatasetError, build_feature_dataset
-from variantrank.models import run_baseline_experiment, run_calibration_experiment
+from variantrank.models import CatBoostConfig, run_baseline_experiment, run_calibration_experiment
 
 logger = logging.getLogger(__name__)
 
@@ -382,8 +382,24 @@ def train_command(
         int | None,
         typer.Option(min=100, help="Optional stratified development sample."),
     ] = None,
+    catboost: Annotated[
+        bool,
+        typer.Option("--catboost/--no-catboost", help="Include the primary CatBoost candidate."),
+    ] = False,
+    catboost_iterations: Annotated[
+        int,
+        typer.Option(min=1, help="Number of CatBoost boosting iterations."),
+    ] = 1000,
+    catboost_depth: Annotated[
+        int,
+        typer.Option(min=1, max=16, help="CatBoost tree depth."),
+    ] = 7,
+    catboost_learning_rate: Annotated[
+        float,
+        typer.Option(min=0.001, max=1.0, help="CatBoost learning rate."),
+    ] = 0.05,
 ) -> None:
-    """Train Dummy, Logistic Regression, and Random Forest baselines."""
+    """Train baseline estimators and the optional CatBoost candidate."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     if strategy not in {"random", "gene", "both"}:
         logger.error("Unknown validation strategy %r", strategy)
@@ -405,6 +421,12 @@ def train_command(
                 strategy=selected_strategy,  # type: ignore[arg-type]
                 feature_set=feature_set,  # type: ignore[arg-type]
                 high_confidence_only=cohort == "high-confidence",
+                include_catboost=catboost,
+                catboost_config=CatBoostConfig(
+                    iterations=catboost_iterations,
+                    depth=catboost_depth,
+                    learning_rate=catboost_learning_rate,
+                ),
                 random_seed=random_seed,
                 max_rows=max_rows,
             )
@@ -438,7 +460,7 @@ def calibrate_command(
             exists=True,
             file_okay=False,
             readable=True,
-            help="Exact baseline run directory containing the Random Forest.",
+            help="Exact training run directory containing the persisted model.",
         ),
     ] = Path("artifacts/models/baselines/clinvar.features/all/annotated_vep_v1/gene"),
     strategy: Annotated[
@@ -449,6 +471,10 @@ def calibrate_command(
         str,
         typer.Option(help="Training cohort: all or high-confidence."),
     ] = "all",
+    model_name: Annotated[
+        str,
+        typer.Option(help="Persisted model to calibrate: random_forest or catboost."),
+    ] = "random_forest",
     random_seed: Annotated[int, typer.Option(help="Baseline split random seed.")] = 42,
     minimum_recall: Annotated[
         float,
@@ -459,12 +485,15 @@ def calibrate_command(
         typer.Option(min=0.01, max=1.0, help="Precision-constrained operating point."),
     ] = 0.90,
 ) -> None:
-    """Compare raw, Platt-scaled, and isotonic Random Forest probabilities."""
+    """Compare raw, Platt-scaled, and isotonic model probabilities."""
     if strategy not in {"random", "gene"}:
         logger.error("Unknown validation strategy %r", strategy)
         raise typer.Exit(code=2)
     if cohort not in {"all", "high-confidence"}:
         logger.error("Unknown cohort %r", cohort)
+        raise typer.Exit(code=2)
+    if model_name not in {"random_forest", "catboost"}:
+        logger.error("Unknown calibration model %r", model_name)
         raise typer.Exit(code=2)
     try:
         result = run_calibration_experiment(
@@ -472,6 +501,7 @@ def calibrate_command(
             baseline_artifact_dir,
             strategy=strategy,  # type: ignore[arg-type]
             high_confidence_only=cohort == "high-confidence",
+            model_name=model_name,
             random_seed=random_seed,
             minimum_recall=minimum_recall,
             minimum_precision=minimum_precision,

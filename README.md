@@ -225,23 +225,26 @@ These are retrospective ClinVar cohort results, not calibrated clinical
 probabilities. Full metrics, split sizes, estimator settings, and interpretation
 are in the [annotated baseline report](reports/tables/annotated_baseline_results.md).
 
-### Probability calibration
+### Primary model and probability calibration
 
-The gene-aware Random Forest was calibrated on validation genes and evaluated
-once on untouched test genes. Isotonic regression improved Brier score from
-0.03037 to 0.02301 on Dataset A and from 0.01929 to 0.01383 on the
-high-confidence Dataset B. Validation-only threshold selection raised held-out
-F1 to 0.9136 and 0.9618 respectively.
+Native-categorical CatBoost was compared with Random Forest on the same
+gene-aware partitions. CatBoost reached PR-AUC 0.9750 on Dataset A and F1 0.9501
+on high-confidence Dataset B. After validation-only isotonic calibration, Brier
+scores were 0.02217 and 0.01306; held-out maximum-F1 operating points reached
+F1 0.9175 and 0.9631 respectively.
 
 ```bash
+uv run variantrank train --strategy gene --catboost
+
 uv run variantrank calibrate \
   --baseline-artifact-dir \
-    artifacts/models/baselines/clinvar.features/all/annotated_vep_v1/gene
+    artifacts/models/baselines/clinvar.features/all/annotated_vep_v1/gene \
+  --model-name catboost
 ```
 
-See the [calibration and operating-point report](reports/tables/calibration_results.md)
-for Platt/isotonic comparisons, precision and recall policies, full test metrics,
-and the exact reproducibility protocol.
+See the [CatBoost model-selection report](reports/tables/catboost_results.md) and
+[calibration report](reports/tables/calibration_results.md) for full held-out
+metrics, operating-point policies, and the exact reproducibility protocol.
 
 Start the API locally:
 
@@ -414,7 +417,8 @@ variant-rank/
 | Dummy, Logistic Regression and Random Forest comparison | Available |
 | Random and gene-aware validation | Available |
 | Probability calibration and threshold selection | Available |
-| CatBoost, LightGBM and chromosome holdout | Scheduled |
+| Native-categorical CatBoost comparison | Available |
+| LightGBM and chromosome holdout | Scheduled |
 | SHAP, ranked inference and reports | Scheduled |
 
 The full engineering and scientific scope is documented in

@@ -5,6 +5,7 @@ import pandas as pd
 
 from variantrank.features import MODEL_CATEGORICAL_FEATURES, MODEL_NUMERIC_FEATURES
 from variantrank.models.calibration import run_calibration_experiment
+from variantrank.models.catboost import CatBoostConfig
 from variantrank.models.training import run_baseline_experiment
 
 
@@ -57,14 +58,23 @@ def test_annotated_baselines_use_persisted_feature_contract(tmp_path: Path) -> N
         strategy="random",
         feature_set="annotated",
         high_confidence_only=True,
+        include_catboost=True,
+        catboost_config=CatBoostConfig(iterations=5, depth=3, learning_rate=0.1),
     )
     metadata = json.loads((result.artifact_dir / "metadata.json").read_text())
 
-    assert set(result.metrics) == {"dummy", "logistic_regression", "random_forest"}
+    assert set(result.metrics) == {
+        "catboost",
+        "dummy",
+        "logistic_regression",
+        "random_forest",
+    }
+    assert (result.artifact_dir / "catboost.joblib").is_file()
     assert metadata["feature_set"] == "annotated_vep_v1"
     assert metadata["cohort"] == "high_confidence"
     assert metadata["dataset_rows"] == 120
     assert metadata["numeric_features"] == MODEL_NUMERIC_FEATURES
+    assert metadata["catboost"]["iterations"] == 5
 
     calibration = run_calibration_experiment(
         dataset,

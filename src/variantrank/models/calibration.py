@@ -41,15 +41,18 @@ def run_calibration_experiment(
     strategy: SplitStrategy,
     feature_set: FeatureSet = "annotated",
     high_confidence_only: bool = False,
+    model_name: str = "random_forest",
     random_seed: int = 42,
     minimum_recall: float = 0.90,
     minimum_precision: float = 0.90,
 ) -> CalibrationExperimentResult:
-    """Calibrate a fitted Random Forest on validation data and evaluate on test data."""
+    """Calibrate a persisted classifier on validation data and evaluate on test data."""
+    if model_name not in {"random_forest", "catboost"}:
+        raise ValueError(f"unsupported calibration model: {model_name}")
     metadata_path = baseline_artifact_dir / "metadata.json"
-    model_path = baseline_artifact_dir / "random_forest.joblib"
+    model_path = baseline_artifact_dir / f"{model_name}.joblib"
     if not metadata_path.is_file() or not model_path.is_file():
-        raise FileNotFoundError("baseline metadata.json and random_forest.joblib are required")
+        raise FileNotFoundError(f"baseline metadata.json and {model_name}.joblib are required")
 
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
     cohort = "high_confidence" if high_confidence_only else "all"
@@ -78,7 +81,8 @@ def run_calibration_experiment(
     test_target = target.iloc[split.test].to_numpy()
     raw_model = joblib.load(model_path)
 
-    artifact_dir = baseline_artifact_dir / "calibration"
+    directory_name = "calibration" if model_name == "random_forest" else f"calibration-{model_name}"
+    artifact_dir = baseline_artifact_dir / directory_name
     artifact_dir.mkdir(parents=True, exist_ok=True)
     metrics: dict[str, dict[str, float]] = {
         "raw": classification_metrics(test_target, raw_model.predict_proba(test_features)[:, 1])
@@ -111,7 +115,7 @@ def run_calibration_experiment(
             }
             for point_name, point in selected.items()
         }
-        joblib.dump(calibrated, artifact_dir / f"random_forest_{name}.joblib")
+        joblib.dump(calibrated, artifact_dir / f"{model_name}_{name}.joblib")
 
     metrics_path = artifact_dir / "metrics.json"
     operating_points_path = artifact_dir / "operating_points.json"
@@ -122,6 +126,7 @@ def run_calibration_experiment(
         {
             "created_at": datetime.now(UTC).isoformat(),
             "source_model": str(model_path),
+            "model_name": model_name,
             "source_metadata": str(metadata_path),
             "dataset": str(dataset),
             "dataset_sha256": expected["dataset_sha256"],

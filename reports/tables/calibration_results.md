@@ -46,10 +46,10 @@ connected component, so no individual gene crosses partitions.
 
 ## Interpretation
 
-The selected default candidate is the isotonic Random Forest with the
-maximum-F1 operating point. Both calibration methods and all operating points
-remain available as versioned artifacts so an inference consumer can choose a
-policy appropriate to its intended research workflow.
+This experiment establishes the calibrated Random Forest reference. The later
+[CatBoost candidate comparison](catboost_results.md) applies the same protocol
+to both estimators and records the primary model selection. Both calibration
+methods and all operating points remain available as versioned local artifacts.
 
 These values describe retrospective performance on ClinVar-derived cohorts.
 They are not clinical risk estimates, diagnostic probabilities, or evidence of

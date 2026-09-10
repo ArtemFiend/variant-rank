@@ -23,6 +23,7 @@ from variantrank.features import (
     build_basic_features,
 )
 from variantrank.models.baselines import build_baseline_models
+from variantrank.models.catboost import CatBoostConfig, build_catboost_model
 
 SplitStrategy = Literal["random", "gene"]
 FeatureSet = Literal["basic", "annotated"]
@@ -49,6 +50,8 @@ def run_baseline_experiment(
     strategy: SplitStrategy,
     feature_set: FeatureSet = "basic",
     high_confidence_only: bool = False,
+    include_catboost: bool = False,
+    catboost_config: CatBoostConfig | None = None,
     random_seed: int = 42,
     max_rows: int | None = None,
 ) -> BaselineExperimentResult:
@@ -80,11 +83,21 @@ def run_baseline_experiment(
     all_metrics: dict[str, dict[str, dict[str, float]]] = {}
     durations: dict[str, float] = {}
 
-    for name, model in build_baseline_models(
+    models = build_baseline_models(
         numeric_features=numeric_features,
         categorical_features=categorical_features,
         random_seed=random_seed,
-    ).items():
+    )
+    resolved_catboost_config = catboost_config or CatBoostConfig()
+    if include_catboost:
+        models["catboost"] = build_catboost_model(
+            numeric_features=numeric_features,
+            categorical_features=categorical_features,
+            random_seed=random_seed,
+            config=resolved_catboost_config,
+        )
+
+    for name, model in models.items():
         started = perf_counter()
         model.fit(features.iloc[split.train], target.iloc[split.train])
         durations[name] = perf_counter() - started
@@ -116,6 +129,7 @@ def run_baseline_experiment(
             "cohort": cohort,
             "numeric_features": numeric_features,
             "categorical_features": categorical_features,
+            "catboost": resolved_catboost_config.as_dict() if include_catboost else None,
             "split": _split_summary(split, target, variants["gene"]),
             "training_seconds": durations,
         },
