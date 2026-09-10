@@ -213,3 +213,35 @@ def test_predict_command(monkeypatch, tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     assert "Ranked 3 variants" in result.stdout
+
+
+def test_evaluate_ranking_command(monkeypatch, tmp_path: Path) -> None:
+    dataset = tmp_path / "features.parquet"
+    model = tmp_path / "model.joblib"
+    output = tmp_path / "ranking.json"
+    dataset.touch()
+    model.touch()
+
+    def fake_evaluation(*_args, **_kwargs):
+        return SimpleNamespace(
+            simulated_patient_metrics={"mrr": 0.92, "recall_at_5": 0.98},
+            output=output,
+        )
+
+    monkeypatch.setattr(variantrank.cli, "run_ranking_evaluation", fake_evaluation)
+    result = runner.invoke(
+        app,
+        [
+            "evaluate-ranking",
+            "--dataset",
+            str(dataset),
+            "--model",
+            str(model),
+            "--output",
+            str(output),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "MRR=0.9200" in result.stdout
+    assert "Recall@5=0.9800" in result.stdout

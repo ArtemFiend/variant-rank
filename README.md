@@ -274,6 +274,15 @@ into the source distribution. See the
 [ranked inference contract](docs/inference-contract.md) for input invariants and
 the complete output schema.
 
+### Ranking evaluation
+
+Across 1,000 simulated 50-variant patient cohorts with one held-out pathogenic
+variant, isotonic CatBoost ranked that variant first in 87.5% of Dataset A
+cohorts and 95.4% of high-confidence Dataset B cohorts. Recall@5 reached 98.0%
+and 99.2%, respectively. See the
+[complete ranking report](reports/tables/ranking_results.md) for MRR, NDCG,
+global top-K results, simulation design, and exact reproduction commands.
+
 Start the API locally:
 
 ```bash
@@ -460,6 +469,7 @@ variant-rank/
 | Native-categorical CatBoost comparison | Available |
 | Ranked annotated-VCF inference to CSV/JSON | Available |
 | REST multipart prediction endpoint | Available |
+| Global and simulated-patient ranking metrics | Available |
 | LightGBM and chromosome holdout | Scheduled |
 | SHAP and HTML reports | Scheduled |
 

@@ -28,6 +28,7 @@ from variantrank.data import (
 )
 from variantrank.data.clinvar import DEFAULT_CLINVAR_MD5_URL, DEFAULT_CLINVAR_URL
 from variantrank.data.download import ChecksumError, download_file, fetch_published_md5
+from variantrank.evaluation.workflow import run_ranking_evaluation
 from variantrank.features import FeatureDatasetError, build_feature_dataset
 from variantrank.inference import InferenceError, predict_annotated_vcf
 from variantrank.models import CatBoostConfig, run_baseline_experiment, run_calibration_experiment
@@ -442,6 +443,56 @@ def train_command(
     except (OSError, ValueError) as error:
         logger.error("Baseline training failed: %s", error)
         raise typer.Exit(code=2) from error
+
+
+@app.command("evaluate-ranking")
+def evaluate_ranking_command(
+    dataset: Annotated[
+        Path,
+        typer.Option(exists=True, dir_okay=False, readable=True, help="Feature dataset."),
+    ] = Path("data/features/clinvar.features.parquet"),
+    model: Annotated[
+        Path,
+        typer.Option(exists=True, dir_okay=False, readable=True, help="Persisted model pipeline."),
+    ] = Path("artifacts/models/latest/model.joblib"),
+    output: Annotated[
+        Path,
+        typer.Option(help="Ranking evaluation JSON artifact."),
+    ] = Path("artifacts/evaluation/ranking.json"),
+    strategy: Annotated[str, typer.Option(help="Validation strategy: random or gene.")] = "gene",
+    cohort: Annotated[str, typer.Option(help="Cohort: all or high-confidence.")] = "all",
+    patients: Annotated[int, typer.Option(min=1, help="Number of simulated patients.")] = 1000,
+    variants_per_patient: Annotated[
+        int,
+        typer.Option(min=10, help="Variants ranked for each simulated patient."),
+    ] = 50,
+    random_seed: Annotated[int, typer.Option(help="Reproducible split and simulation seed.")] = 42,
+) -> None:
+    """Evaluate held-out global and simulated-patient variant ranking."""
+    if strategy not in {"random", "gene"}:
+        raise typer.BadParameter("strategy must be random or gene")
+    if cohort not in {"all", "high-confidence"}:
+        raise typer.BadParameter("cohort must be all or high-confidence")
+    try:
+        result = run_ranking_evaluation(
+            dataset,
+            model,
+            output,
+            strategy=strategy,  # type: ignore[arg-type]
+            high_confidence_only=cohort == "high-confidence",
+            random_seed=random_seed,
+            patients=patients,
+            variants_per_patient=variants_per_patient,
+        )
+    except (OSError, ValueError) as error:
+        logger.error("Ranking evaluation failed: %s", error)
+        raise typer.Exit(code=2) from error
+    metrics = result.simulated_patient_metrics
+    typer.echo(
+        f"Simulated patients: MRR={metrics['mrr']:.4f} "
+        f"Recall@5={metrics.get('recall_at_5', float('nan')):.4f}"
+    )
+    typer.echo(f"Metrics: {result.output}")
 
 
 @app.command("predict")
