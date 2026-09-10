@@ -225,6 +225,24 @@ These are retrospective ClinVar cohort results, not calibrated clinical
 probabilities. Full metrics, split sizes, estimator settings, and interpretation
 are in the [annotated baseline report](reports/tables/annotated_baseline_results.md).
 
+### Probability calibration
+
+The gene-aware Random Forest was calibrated on validation genes and evaluated
+once on untouched test genes. Isotonic regression improved Brier score from
+0.03037 to 0.02301 on Dataset A and from 0.01929 to 0.01383 on the
+high-confidence Dataset B. Validation-only threshold selection raised held-out
+F1 to 0.9136 and 0.9618 respectively.
+
+```bash
+uv run variantrank calibrate \
+  --baseline-artifact-dir \
+    artifacts/models/baselines/clinvar.features/all/annotated_vep_v1/gene
+```
+
+See the [calibration and operating-point report](reports/tables/calibration_results.md)
+for Platt/isotonic comparisons, precision and recall policies, full test metrics,
+and the exact reproducibility protocol.
+
 Start the API locally:
 
 ```bash
@@ -395,8 +413,9 @@ variant-rank/
 | Leakage-safe model-ready feature dataset | Available |
 | Dummy, Logistic Regression and Random Forest comparison | Available |
 | Random and gene-aware validation | Available |
+| Probability calibration and threshold selection | Available |
 | CatBoost, LightGBM and chromosome holdout | Scheduled |
-| Calibration, SHAP, ranked inference and reports | Scheduled |
+| SHAP, ranked inference and reports | Scheduled |
 
 The full engineering and scientific scope is documented in
 [`VariantRank_TZ.md`](VariantRank_TZ.md).

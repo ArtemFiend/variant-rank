@@ -29,7 +29,7 @@ from variantrank.data import (
 from variantrank.data.clinvar import DEFAULT_CLINVAR_MD5_URL, DEFAULT_CLINVAR_URL
 from variantrank.data.download import ChecksumError, download_file, fetch_published_md5
 from variantrank.features import FeatureDatasetError, build_feature_dataset
-from variantrank.models import run_baseline_experiment
+from variantrank.models import run_baseline_experiment, run_calibration_experiment
 
 logger = logging.getLogger(__name__)
 
@@ -419,6 +419,74 @@ def train_command(
     except (OSError, ValueError) as error:
         logger.error("Baseline training failed: %s", error)
         raise typer.Exit(code=2) from error
+
+
+@app.command("calibrate")
+def calibrate_command(
+    dataset: Annotated[
+        Path,
+        typer.Option(
+            exists=True,
+            dir_okay=False,
+            readable=True,
+            help="Model-ready feature Parquet dataset.",
+        ),
+    ] = Path("data/features/clinvar.features.parquet"),
+    baseline_artifact_dir: Annotated[
+        Path,
+        typer.Option(
+            exists=True,
+            file_okay=False,
+            readable=True,
+            help="Exact baseline run directory containing the Random Forest.",
+        ),
+    ] = Path("artifacts/models/baselines/clinvar.features/all/annotated_vep_v1/gene"),
+    strategy: Annotated[
+        str,
+        typer.Option(help="Validation strategy used for baseline training: random or gene."),
+    ] = "gene",
+    cohort: Annotated[
+        str,
+        typer.Option(help="Training cohort: all or high-confidence."),
+    ] = "all",
+    random_seed: Annotated[int, typer.Option(help="Baseline split random seed.")] = 42,
+    minimum_recall: Annotated[
+        float,
+        typer.Option(min=0.01, max=1.0, help="Recall-constrained operating point."),
+    ] = 0.90,
+    minimum_precision: Annotated[
+        float,
+        typer.Option(min=0.01, max=1.0, help="Precision-constrained operating point."),
+    ] = 0.90,
+) -> None:
+    """Compare raw, Platt-scaled, and isotonic Random Forest probabilities."""
+    if strategy not in {"random", "gene"}:
+        logger.error("Unknown validation strategy %r", strategy)
+        raise typer.Exit(code=2)
+    if cohort not in {"all", "high-confidence"}:
+        logger.error("Unknown cohort %r", cohort)
+        raise typer.Exit(code=2)
+    try:
+        result = run_calibration_experiment(
+            dataset,
+            baseline_artifact_dir,
+            strategy=strategy,  # type: ignore[arg-type]
+            high_confidence_only=cohort == "high-confidence",
+            random_seed=random_seed,
+            minimum_recall=minimum_recall,
+            minimum_precision=minimum_precision,
+        )
+    except (OSError, ValueError) as error:
+        logger.error("Probability calibration failed: %s", error)
+        raise typer.Exit(code=2) from error
+
+    typer.echo("\nHeld-out test calibration metrics")
+    for method, metrics in result.metrics.items():
+        typer.echo(
+            f"{method:>10}: ROC-AUC={metrics['roc_auc']:.4f} "
+            f"PR-AUC={metrics['pr_auc']:.4f} Brier={metrics['brier_score']:.5f}"
+        )
+    typer.echo(f"Artifacts: {result.artifact_dir}")
 
 
 if __name__ == "__main__":  # pragma: no cover

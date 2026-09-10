@@ -1,7 +1,7 @@
 # Annotated baseline results
 
-Experiment date: 2026-09-10  
-Random seed: 42  
+Experiment date: 2026-09-10
+Random seed: 42
 Feature contract: `annotated_vep_v1`
 
 The experiment compares Dummy, Logistic Regression, and Random Forest models

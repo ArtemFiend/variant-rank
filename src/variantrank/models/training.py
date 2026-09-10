@@ -52,7 +52,7 @@ def run_baseline_experiment(
     random_seed: int = 42,
     max_rows: int | None = None,
 ) -> BaselineExperimentResult:
-    """Train and evaluate Dummy and Logistic Regression on one dataset."""
+    """Train and evaluate baseline estimators on one dataset."""
     if not dataset.is_file():
         raise FileNotFoundError(dataset)
     if max_rows is not None and max_rows < 100:

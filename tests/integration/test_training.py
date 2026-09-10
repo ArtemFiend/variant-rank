@@ -4,6 +4,7 @@ from pathlib import Path
 import pandas as pd
 
 from variantrank.features import MODEL_CATEGORICAL_FEATURES, MODEL_NUMERIC_FEATURES
+from variantrank.models.calibration import run_calibration_experiment
 from variantrank.models.training import run_baseline_experiment
 
 
@@ -64,3 +65,20 @@ def test_annotated_baselines_use_persisted_feature_contract(tmp_path: Path) -> N
     assert metadata["cohort"] == "high_confidence"
     assert metadata["dataset_rows"] == 120
     assert metadata["numeric_features"] == MODEL_NUMERIC_FEATURES
+
+    calibration = run_calibration_experiment(
+        dataset,
+        result.artifact_dir,
+        strategy="random",
+        high_confidence_only=True,
+        minimum_recall=0.50,
+        minimum_precision=0.50,
+    )
+    calibration_metadata = json.loads((calibration.artifact_dir / "metadata.json").read_text())
+
+    assert set(calibration.metrics) == {"raw", "platt", "isotonic"}
+    assert (calibration.artifact_dir / "random_forest_platt.joblib").is_file()
+    assert (calibration.artifact_dir / "random_forest_isotonic.joblib").is_file()
+    assert calibration.operating_points_path.is_file()
+    assert calibration_metadata["dataset_rows"] == 120
+    assert calibration_metadata["calibration_partition_rows"] == 18

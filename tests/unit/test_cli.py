@@ -149,3 +149,38 @@ def test_build_features_command(monkeypatch, tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     assert "2 variants" in result.stdout
+
+
+def test_calibrate_command(monkeypatch, tmp_path: Path) -> None:
+    dataset = tmp_path / "features.parquet"
+    artifact_dir = tmp_path / "baseline"
+    dataset.touch()
+    artifact_dir.mkdir()
+
+    def fake_calibration(*_args, **_kwargs):
+        return SimpleNamespace(
+            metrics={
+                "raw": {"roc_auc": 0.91, "pr_auc": 0.82, "brier_score": 0.12},
+                "isotonic": {"roc_auc": 0.91, "pr_auc": 0.81, "brier_score": 0.08},
+            },
+            artifact_dir=artifact_dir / "calibration",
+        )
+
+    monkeypatch.setattr(variantrank.cli, "run_calibration_experiment", fake_calibration)
+    result = runner.invoke(
+        app,
+        [
+            "calibrate",
+            "--dataset",
+            str(dataset),
+            "--baseline-artifact-dir",
+            str(artifact_dir),
+            "--strategy",
+            "gene",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Held-out test calibration metrics" in result.stdout
+    assert "Brier=0.08000" in result.stdout
+    assert "calibration" in result.stdout
