@@ -12,6 +12,8 @@ from variantrank.features.dataset import (
     FeatureDatasetError,
     FeatureDatasetResult,
     build_feature_dataset,
+    build_model_features,
+    normalize_model_features,
 )
 from variantrank.features.variant import (
     BASIC_CATEGORICAL_FEATURES,
@@ -32,4 +34,6 @@ __all__ = [
     "build_annotation_features",
     "build_basic_features",
     "build_feature_dataset",
+    "build_model_features",
+    "normalize_model_features",
 ]

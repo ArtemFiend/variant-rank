@@ -184,3 +184,32 @@ def test_calibrate_command(monkeypatch, tmp_path: Path) -> None:
     assert "Held-out test calibration metrics" in result.stdout
     assert "Brier=0.08000" in result.stdout
     assert "calibration" in result.stdout
+
+
+def test_predict_command(monkeypatch, tmp_path: Path) -> None:
+    annotations = tmp_path / "annotations.parquet"
+    model = tmp_path / "model.joblib"
+    output = tmp_path / "ranked.csv"
+    annotations.touch()
+    model.touch()
+
+    def fake_predict(*_args, **_kwargs):
+        return SimpleNamespace(rows=3, output=output)
+
+    monkeypatch.setattr(variantrank.cli, "predict_annotated_vcf", fake_predict)
+    result = runner.invoke(
+        app,
+        [
+            "predict",
+            str(VEP_FIXTURE),
+            "--annotations",
+            str(annotations),
+            "--model",
+            str(model),
+            "--output",
+            str(output),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Ranked 3 variants" in result.stdout

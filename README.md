@@ -246,6 +246,34 @@ See the [CatBoost model-selection report](reports/tables/catboost_results.md) an
 [calibration report](reports/tables/calibration_results.md) for full held-out
 metrics, operating-point policies, and the exact reproducibility protocol.
 
+### Ranked inference
+
+Score a normalized GRCh38 VCF after producing its matching typed VEP annotation
+Parquet. The command rebuilds the exact training feature contract, applies a
+persisted fitted or calibrated pipeline, and writes a deterministic score-ranked
+CSV or JSON result.
+
+```bash
+uv run variantrank predict tests/fixtures/example.vep.vcf \
+  --annotations data/annotated/example.vep.parquet \
+  --model \
+    artifacts/models/candidates/clinvar.features/all/annotated_vep_v1/gene/calibration-catboost/catboost_isotonic.joblib \
+  --threshold 0.4761 \
+  --output results/variants.csv
+```
+
+```text
+rank  variant_id          gene   consequence       score   prediction
+1     17:7674220:C:T      TP53   missense_variant  0.947   pathogenic
+2     13:32340301:C:T     BRCA2  stop_gained       0.916   pathogenic
+```
+
+Inference rejects missing, duplicated, or unexpected annotation keys instead of
+silently dropping variants. Model artifacts remain local and are never bundled
+into the source distribution. See the
+[ranked inference contract](docs/inference-contract.md) for input invariants and
+the complete output schema.
+
 Start the API locally:
 
 ```bash
@@ -418,8 +446,9 @@ variant-rank/
 | Random and gene-aware validation | Available |
 | Probability calibration and threshold selection | Available |
 | Native-categorical CatBoost comparison | Available |
+| Ranked annotated-VCF inference to CSV/JSON | Available |
 | LightGBM and chromosome holdout | Scheduled |
-| SHAP, ranked inference and reports | Scheduled |
+| SHAP, REST prediction endpoint and HTML reports | Scheduled |
 
 The full engineering and scientific scope is documented in
 [`VariantRank_TZ.md`](VariantRank_TZ.md).

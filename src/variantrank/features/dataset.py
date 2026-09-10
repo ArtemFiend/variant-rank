@@ -102,10 +102,9 @@ def build_feature_dataset(
         validate="one_to_one",
         sort=False,
     )
-    basic = build_basic_features(merged)
-    annotated = build_annotation_features(merged)
+    model_features = build_model_features(merged)
     feature_frame = pd.concat(
-        [merged.loc[:, METADATA_COLUMNS].reset_index(drop=True), basic, annotated],
+        [merged.loc[:, METADATA_COLUMNS].reset_index(drop=True), model_features],
         axis=1,
     ).loc[:, [*METADATA_COLUMNS, *MODEL_FEATURES]]
 
@@ -139,6 +138,23 @@ def build_feature_dataset(
         encoding="utf-8",
     )
     return FeatureDatasetResult(output, manifest, len(feature_frame), cached=False)
+
+
+def build_model_features(variants_with_annotations: pd.DataFrame) -> pd.DataFrame:
+    """Build the ordered feature contract shared by training and inference."""
+    basic = build_basic_features(variants_with_annotations).reset_index(drop=True)
+    annotated = build_annotation_features(variants_with_annotations).reset_index(drop=True)
+    return pd.concat([basic, annotated], axis=1).loc[:, MODEL_FEATURES]
+
+
+def normalize_model_features(features: pd.DataFrame) -> pd.DataFrame:
+    """Normalize nullable pandas dtypes for persisted scikit-learn pipelines."""
+    normalized = features.copy()
+    normalized[MODEL_NUMERIC_FEATURES] = normalized[MODEL_NUMERIC_FEATURES].astype("float64")
+    for name in MODEL_CATEGORICAL_FEATURES:
+        column = normalized[name].astype("object")
+        normalized[name] = column.where(column.notna(), None)
+    return normalized
 
 
 def _read_labels(path: Path) -> pd.DataFrame:

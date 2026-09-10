@@ -29,6 +29,7 @@ from variantrank.data import (
 from variantrank.data.clinvar import DEFAULT_CLINVAR_MD5_URL, DEFAULT_CLINVAR_URL
 from variantrank.data.download import ChecksumError, download_file, fetch_published_md5
 from variantrank.features import FeatureDatasetError, build_feature_dataset
+from variantrank.inference import InferenceError, predict_annotated_vcf
 from variantrank.models import CatBoostConfig, run_baseline_experiment, run_calibration_experiment
 
 logger = logging.getLogger(__name__)
@@ -441,6 +442,54 @@ def train_command(
     except (OSError, ValueError) as error:
         logger.error("Baseline training failed: %s", error)
         raise typer.Exit(code=2) from error
+
+
+@app.command("predict")
+def predict_command(
+    input_path: Annotated[
+        Path,
+        typer.Argument(exists=True, dir_okay=False, readable=True, help="Normalized GRCh38 VCF."),
+    ],
+    annotations: Annotated[
+        Path,
+        typer.Option(
+            exists=True,
+            dir_okay=False,
+            readable=True,
+            help="Typed VEP annotation Parquet matching the input VCF.",
+        ),
+    ],
+    model: Annotated[
+        Path,
+        typer.Option(
+            exists=True,
+            dir_okay=False,
+            readable=True,
+            help="Persisted fitted or calibrated pipeline.",
+        ),
+    ],
+    output: Annotated[
+        Path,
+        typer.Option(help="Ranked .csv or .json destination."),
+    ] = Path("results/variants.csv"),
+    threshold: Annotated[
+        float,
+        typer.Option(min=0.0, max=1.0, help="Pathogenic prediction threshold."),
+    ] = 0.5,
+) -> None:
+    """Score and rank an annotated VCF with a persisted model pipeline."""
+    try:
+        result = predict_annotated_vcf(
+            input_path,
+            annotations,
+            model,
+            output,
+            threshold=threshold,
+        )
+    except (InferenceError, OSError, ValueError, VCFFormatError) as error:
+        logger.error("Variant inference failed: %s", error)
+        raise typer.Exit(code=2) from error
+    typer.echo(f"Ranked {result.rows:,} variants: {result.output}")
 
 
 @app.command("calibrate")

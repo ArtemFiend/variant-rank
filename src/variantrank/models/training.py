@@ -21,6 +21,7 @@ from variantrank.features import (
     MODEL_FEATURES,
     MODEL_NUMERIC_FEATURES,
     build_basic_features,
+    normalize_model_features,
 )
 from variantrank.models.baselines import build_baseline_models
 from variantrank.models.catboost import CatBoostConfig, build_catboost_model
@@ -170,11 +171,7 @@ def _load_features(
     variants = pd.read_parquet(dataset, columns=ANNOTATED_DATASET_COLUMNS)
     if high_confidence_only:
         variants = variants.loc[variants["high_confidence"]].copy()
-    features = _normalize_features(
-        variants.loc[:, MODEL_FEATURES].copy(),
-        numeric_features=MODEL_NUMERIC_FEATURES,
-        categorical_features=MODEL_CATEGORICAL_FEATURES,
-    )
+    features = normalize_model_features(variants.loc[:, MODEL_FEATURES])
     return variants, features, MODEL_NUMERIC_FEATURES, MODEL_CATEGORICAL_FEATURES
 
 
