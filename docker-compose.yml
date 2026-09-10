@@ -5,6 +5,11 @@ services:
       - "8000:8000"
     environment:
       VARIANTRANK_LOG_LEVEL: INFO
+      VARIANTRANK_MODEL_PATH: ${VARIANTRANK_MODEL_PATH:-}
+      VARIANTRANK_THRESHOLD: ${VARIANTRANK_THRESHOLD:-0.5}
+      VARIANTRANK_VEP_SERVER: ${VARIANTRANK_VEP_SERVER:-https://rest.ensembl.org}
+    volumes:
+      - ./artifacts:/app/artifacts:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s

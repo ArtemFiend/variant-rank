@@ -277,11 +277,23 @@ the complete output schema.
 Start the API locally:
 
 ```bash
+VARIANTRANK_MODEL_PATH="artifacts/models/candidates/clinvar.features/all/annotated_vep_v1/gene/calibration-catboost/catboost_isotonic.joblib" \
+VARIANTRANK_THRESHOLD=0.4761 \
 uv run uvicorn variantrank.api.app:app --host 0.0.0.0 --port 8000
 ```
 
+Submit a small normalized GRCh38 VCF for online VEP annotation and ranked
+prediction:
+
+```bash
+curl --fail-with-body \
+  --form "file=@tests/fixtures/example.vcf;type=text/plain" \
+  http://localhost:8000/predict
+```
+
 Open the interactive OpenAPI documentation at
-[`http://localhost:8000/docs`](http://localhost:8000/docs).
+[`http://localhost:8000/docs`](http://localhost:8000/docs). The complete service
+contract is documented in the [API guide](docs/api.md).
 
 ### Docker
 
@@ -447,8 +459,9 @@ variant-rank/
 | Probability calibration and threshold selection | Available |
 | Native-categorical CatBoost comparison | Available |
 | Ranked annotated-VCF inference to CSV/JSON | Available |
+| REST multipart prediction endpoint | Available |
 | LightGBM and chromosome holdout | Scheduled |
-| SHAP, REST prediction endpoint and HTML reports | Scheduled |
+| SHAP and HTML reports | Scheduled |
 
 The full engineering and scientific scope is documented in
 [`VariantRank_TZ.md`](VariantRank_TZ.md).
