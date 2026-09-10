@@ -22,6 +22,8 @@ class Variant:
             raise ValueError("REF allele must not be empty")
         if not self.alt or self.alt == ".":
             raise ValueError("ALT allele must not be empty")
+        if self.ref == self.alt:
+            raise ValueError("REF and ALT alleles must differ")
 
     @property
     def key(self) -> str:

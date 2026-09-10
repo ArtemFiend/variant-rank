@@ -149,8 +149,8 @@ def annotate_local_command(
     ],
     output_path: Annotated[
         Path,
-        typer.Option(help="VEP JSON Lines output file."),
-    ] = Path("data/annotated/vep.jsonl"),
+        typer.Option(help="Compact allowlisted VEP tabular output file."),
+    ] = Path("data/annotated/vep.tsv"),
     cache_dir: Annotated[
         Path,
         typer.Option(help="Host directory containing the Ensembl VEP cache."),
@@ -207,7 +207,9 @@ def annotate_local_command(
 def parse_vep_output_command(
     input_path: Annotated[
         Path,
-        typer.Argument(exists=True, dir_okay=False, readable=True, help="VEP JSON Lines file."),
+        typer.Argument(
+            exists=True, dir_okay=False, readable=True, help="VEP TSV or JSON Lines file."
+        ),
     ],
     output_path: Annotated[
         Path,
@@ -219,7 +221,7 @@ def parse_vep_output_command(
     ] = 50_000,
     force: Annotated[bool, typer.Option(help="Replace a matching cached conversion.")] = False,
 ) -> None:
-    """Convert raw local VEP JSON into the stable annotation contract."""
+    """Convert local VEP TSV or JSON Lines into the stable annotation contract."""
     try:
         result = convert_vep_output(
             input_path,

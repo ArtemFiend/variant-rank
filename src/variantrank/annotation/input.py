@@ -1,7 +1,10 @@
 """Streaming conversion from curated Parquet rows to VEP-ready VCF."""
 
 import gzip
+import io
 import json
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -13,6 +16,9 @@ from variantrank.annotation.vep import encode_variant_identifier
 from variantrank.data.download import file_digest
 
 VEP_INPUT_COLUMNS = ("chrom", "pos", "ref", "alt")
+CANONICAL_CHROMOSOMES = (*map(str, range(1, 23)), "X", "Y", "MT")
+VEP_INPUT_VERSION = 2
+VEP_SORT_ORDER = "canonical_chromosome,pos,ref,alt"
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,13 +63,27 @@ def export_vep_input(
         handle.write("##fileformat=VCFv4.2\n")
         handle.write("##reference=GRCh38\n")
         handle.write("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n")
-        for batch in parquet.iter_batches(batch_size=batch_size, columns=list(VEP_INPUT_COLUMNS)):
-            chroms, positions, refs, alts = (batch.column(index).to_pylist() for index in range(4))
-            for chrom, pos, ref, alt in zip(chroms, positions, refs, alts, strict=True):
-                variant_key = f"{chrom}:{pos}:{ref}:{alt}"
-                identifier = encode_variant_identifier(variant_key)
-                handle.write(f"{chrom}\t{pos}\t{identifier}\t{ref}\t{alt}\t.\tPASS\t.\n")
-                rows += 1
+        for chrom in CANONICAL_CHROMOSOMES:
+            table = pq.read_table(
+                dataset,
+                columns=list(VEP_INPUT_COLUMNS),
+                filters=[("chrom", "=", chrom)],
+            ).sort_by([("pos", "ascending"), ("ref", "ascending"), ("alt", "ascending")])
+            for batch in table.to_batches(max_chunksize=batch_size):
+                chroms, positions, refs, alts = (
+                    batch.column(index).to_pylist() for index in range(4)
+                )
+                for row_chrom, pos, ref, alt in zip(chroms, positions, refs, alts, strict=True):
+                    variant_key = f"{row_chrom}:{pos}:{ref}:{alt}"
+                    identifier = encode_variant_identifier(variant_key)
+                    handle.write(f"{row_chrom}\t{pos}\t{identifier}\t{ref}\t{alt}\t.\tPASS\t.\n")
+                    rows += 1
+    if rows != parquet.metadata.num_rows:
+        partial.unlink(missing_ok=True)
+        raise ValueError(
+            "dataset contains non-canonical chromosomes: "
+            f"exported {rows} of {parquet.metadata.num_rows} variants"
+        )
     if rows == 0:
         partial.unlink(missing_ok=True)
         raise ValueError("dataset contains no variants")
@@ -78,7 +98,9 @@ def export_vep_input(
                 "output": str(output),
                 "output_sha256": file_digest(output),
                 "rows": rows,
+                "sort_order": VEP_SORT_ORDER,
                 "variant_id_encoding": "urlsafe-base64",
+                "version": VEP_INPUT_VERSION,
             },
             indent=2,
             sort_keys=True,
@@ -89,10 +111,18 @@ def export_vep_input(
     return VEPInputResult(output, manifest, rows, cached=False)
 
 
-def _open_output(path: Path, *, compressed: bool) -> TextIO:
+@contextmanager
+def _open_output(path: Path, *, compressed: bool) -> Iterator[TextIO]:
     if compressed:
-        return gzip.open(path, mode="wt", encoding="utf-8")
-    return path.open(mode="w", encoding="utf-8")
+        with (
+            path.open(mode="wb") as raw,
+            gzip.GzipFile(fileobj=raw, mode="wb", filename="", mtime=0) as compressed_file,
+            io.TextIOWrapper(compressed_file, encoding="utf-8") as text_file,
+        ):
+            yield text_file
+        return
+    with path.open(mode="w", encoding="utf-8") as text_file:
+        yield text_file
 
 
 def _cached_rows(output: Path, manifest: Path, source_checksum: str) -> int | None:
@@ -100,9 +130,11 @@ def _cached_rows(output: Path, manifest: Path, source_checksum: str) -> int | No
         return None
     try:
         payload = json.loads(manifest.read_text(encoding="utf-8"))
-        if payload.get("dataset_sha256") == source_checksum and payload.get(
-            "output_sha256"
-        ) == file_digest(output):
+        if (
+            payload.get("version") == VEP_INPUT_VERSION
+            and payload.get("dataset_sha256") == source_checksum
+            and payload.get("output_sha256") == file_digest(output)
+        ):
             return int(payload["rows"])
     except (KeyError, TypeError, ValueError, OSError, json.JSONDecodeError):
         return None

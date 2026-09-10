@@ -29,10 +29,10 @@ annotate:
 	uv run variantrank annotate-vcf tests/fixtures/example.vcf
 
 annotate-local:
-	uv run variantrank annotate-local tests/fixtures/example.vcf --dry-run
+	uv run variantrank annotate-local tests/fixtures/example.vep.vcf --dry-run
 
 parse-vep-output:
-	uv run variantrank parse-vep-output data/annotated/vep.jsonl
+	uv run variantrank parse-vep-output data/annotated/vep.tsv
 
 train:
 	uv run variantrank train --strategy both

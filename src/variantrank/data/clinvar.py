@@ -93,6 +93,7 @@ class ClinVarQC:
     excluded_label: int = 0
     excluded_gene: int = 0
     excluded_coordinates: int = 0
+    excluded_no_change: int = 0
     excluded_noncanonical_chromosome: int = 0
     eligible_rows: int = 0
     conflicting_variants: int = 0
@@ -277,6 +278,9 @@ def _curate_chunk(chunk: pd.DataFrame, assembly: str, qc: ClinVarQC) -> pd.DataF
         pos, ref, alt = minimal_representation(
             int(row["pos"]), str(row["ref"]).upper(), str(row["alt"]).upper()
         )
+        if ref == alt:
+            qc.excluded_no_change += 1
+            continue
         chrom = str(row["chrom"])
         records.append(
             {

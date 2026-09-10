@@ -73,6 +73,12 @@ def test_parse_intergenic_result_preserves_missing_frequency() -> None:
     assert result.rare_variant_flag is None
 
 
+def test_parse_local_vep_input_reconstructs_key_from_vcf_fields() -> None:
+    result = parse_vep_response([{"input": "chr1\t100\trs1\tA\tG\t.\tPASS\t."}])[0]
+
+    assert result.variant == "1:100:A:G"
+
+
 def test_annotate_vcf_persists_contract(tmp_path: Path) -> None:
     payload = json.loads((FIXTURES / "vep_response.json").read_text())
 

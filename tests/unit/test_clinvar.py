@@ -70,3 +70,20 @@ def test_prepare_clinvar_dataset_rejects_missing_schema(tmp_path: Path) -> None:
 def test_prepare_clinvar_dataset_rejects_invalid_chunk_size(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="positive"):
         prepare_clinvar_dataset(FIXTURE, tmp_path, chunk_size=0)
+
+
+def test_prepare_clinvar_dataset_excludes_no_change_alleles(tmp_path: Path) -> None:
+    source = tmp_path / "clinvar.tsv"
+    frame = pd.read_csv(FIXTURE, sep="\t", dtype="string", keep_default_na=False)
+    no_change = frame.iloc[[0]].copy()
+    no_change["#AlleleID"] = "999001"
+    no_change["VariationID"] = "999002"
+    no_change["PositionVCF"] = "999003"
+    no_change["ReferenceAlleleVCF"] = "A"
+    no_change["AlternateAlleleVCF"] = "A"
+    pd.concat([frame, no_change], ignore_index=True).to_csv(source, sep="\t", index=False)
+
+    result = prepare_clinvar_dataset(source, tmp_path / "output")
+
+    assert result.qc.excluded_no_change == 1
+    assert "1:999003:A:A" not in set(pd.read_parquet(result.dataset_a)["variant_id"])

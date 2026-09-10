@@ -8,6 +8,7 @@ import variantrank.cli
 from variantrank.cli import app
 
 FIXTURE = Path(__file__).parents[1] / "fixtures" / "example.vcf"
+VEP_FIXTURE = Path(__file__).parents[1] / "fixtures" / "example.vep.vcf"
 CLINVAR_FIXTURE = Path(__file__).parents[1] / "fixtures" / "clinvar_variant_summary.tsv"
 runner = CliRunner()
 
@@ -69,7 +70,7 @@ def test_annotate_local_dry_run_command(tmp_path: Path) -> None:
         app,
         [
             "annotate-local",
-            str(FIXTURE),
+            str(VEP_FIXTURE),
             "--output-path",
             str(tmp_path / "vep.jsonl"),
             "--cache-dir",

@@ -46,29 +46,29 @@ source Parquet checksum match the sidecar manifest.
 Preview the exact offline command without requiring the cache:
 
 ```bash
-uv run variantrank annotate-local tests/fixtures/example.vcf --dry-run
+uv run variantrank annotate-local tests/fixtures/example.vep.vcf --dry-run
 ```
 
 Run annotation after the cache is installed:
 
 ```bash
-uv run variantrank annotate-local tests/fixtures/example.vcf \
+uv run variantrank annotate-local tests/fixtures/example.vep.vcf \
   --cache-dir data/external/vep \
-  --output-path data/annotated/example.vep.jsonl
+  --output-path data/annotated/example.vep.tsv
 ```
 
 For the full Dataset A export, pass
 `data/interim/clinvar.vep.vcf.gz` as the input instead of the fixture.
 
-Convert the raw line-delimited VEP JSON to the typed annotation contract:
+Convert the compact allowlisted VEP TSV to the typed annotation contract:
 
 ```bash
-uv run variantrank parse-vep-output data/annotated/vep.jsonl
+uv run variantrank parse-vep-output data/annotated/vep.tsv
 ```
 
-The parser streams JSON records into compressed Parquet row groups, restores
+The parser streams tabular records into compressed Parquet row groups, restores
 canonical variant keys from the safe VCF identifiers, preserves missing
-frequency values, and writes its own checksum manifest. Malformed JSON or an
+frequency values, and writes its own checksum manifest. Malformed rows or an
 empty annotation result never replaces a previously valid Parquet output.
 
 The runner writes to a partial file, promotes it only after a successful VEP
@@ -77,6 +77,13 @@ container image, cache version, full argv, runtime, and annotation options. A
 subsequent invocation is skipped only when the input checksum, configuration,
 output checksum, and manifest all match. `--force` explicitly bypasses this
 cache check.
+
+Local VEP input must contain exactly one ALT allele per row. The dataset export
+enforces this contract, assigns reversible safe IDs, and writes records in
+canonical chromosome, position, reference, and alternate-allele order. It
+sorts one chromosome at a time to bound memory use and writes deterministic
+gzip metadata. Multiallelic source VCFs must pass through the VariantRank
+parser/export boundary before offline VEP.
 
 ## Output schema
 
@@ -121,3 +128,9 @@ Each Parquet output has an adjacent `*.metadata.json` file containing:
 - ordered output schema.
 
 The annotation layer never reads ClinVar clinical significance or target fields.
+
+The local Ensembl human cache itself contains ClinVar co-located metadata, so
+raw VEP JSON may include `clin_sig`, phenotype, or disease fields. The streaming
+converter uses an explicit allowlist schema and discards these fields before
+training data is created. See the
+[verified VEP environment report](../reports/tables/vep_environment_summary.md).

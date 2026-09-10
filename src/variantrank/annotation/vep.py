@@ -16,6 +16,7 @@ import pandas as pd
 
 from variantrank.data import read_vcf
 from variantrank.data.download import file_digest
+from variantrank.data.vcf import canonical_chromosome
 from variantrank.domain import Variant
 
 DEFAULT_VEP_URL = "https://rest.ensembl.org"
@@ -251,8 +252,15 @@ def _as_vcf_record(variant: Variant, identifier: str) -> str:
 
 def _variant_key(result: Mapping[str, Any]) -> str:
     fields = str(result.get("input", "")).split()
-    if len(fields) >= 3 and fields[2] not in {"", "."}:
-        return decode_variant_identifier(fields[2])
+    if len(fields) >= 3:
+        identifier = fields[2]
+        if identifier.startswith("vr_"):
+            return decode_variant_identifier(identifier)
+        if identifier.startswith("vr") and identifier[2:].isdigit():
+            return identifier
+    if len(fields) >= 5 and "," not in fields[4]:
+        chrom = canonical_chromosome(fields[0])
+        return f"{chrom}:{fields[1]}:{fields[3]}:{fields[4]}"
     raise VEPRequestError("VEP response has no input variant identifier")
 
 

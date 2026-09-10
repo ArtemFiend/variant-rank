@@ -1,5 +1,6 @@
 """Reproducible local Ensembl VEP execution through Docker."""
 
+import gzip
 import json
 import shlex
 import subprocess
@@ -14,6 +15,47 @@ from variantrank.data.download import file_digest
 
 DEFAULT_VEP_IMAGE = "ensemblorg/ensembl-vep:release_116.1"
 DEFAULT_CACHE_VERSION = 116
+LOCAL_VEP_FLAGS = (
+    "--pick",
+    "--canonical",
+    "--mane",
+    "--numbers",
+    "--protein",
+    "--symbol",
+    "--biotype",
+    "--variant_class",
+    "--af",
+    "--af_gnomade",
+)
+VEP_TAB_FIELDS = (
+    "Uploaded_variation",
+    "Location",
+    "Allele",
+    "Gene",
+    "Feature",
+    "Consequence",
+    "Protein_position",
+    "Amino_acids",
+    "Codons",
+    "SYMBOL",
+    "IMPACT",
+    "BIOTYPE",
+    "EXON",
+    "INTRON",
+    "CANONICAL",
+    "MANE_SELECT",
+    "AF",
+    "AFR_AF",
+    "AMR_AF",
+    "EAS_AF",
+    "SAS_AF",
+    "gnomADe_AF",
+    "gnomADe_AFR_AF",
+    "gnomADe_AMR_AF",
+    "gnomADe_EAS_AF",
+    "gnomADe_NFE_AF",
+    "gnomADe_SAS_AF",
+)
 CommandRunner = Callable[..., subprocess.CompletedProcess[str]]
 
 
@@ -61,6 +103,7 @@ def run_local_vep(
     """Run pinned VEP offline and reuse an output with matching provenance."""
     if not source.is_file():
         raise FileNotFoundError(source)
+    _validate_biallelic_vcf(source)
     source_checksum = file_digest(source)
     manifest = output.with_suffix(output.suffix + ".manifest.json")
     configuration = _configuration(config)
@@ -142,7 +185,9 @@ def _docker_command(source: Path, output: Path, config: LocalVEPConfig) -> list[
             f"/output/{output.name}",
             "--format",
             "vcf",
-            "--json",
+            "--tab",
+            "--fields",
+            ",".join(VEP_TAB_FIELDS),
             "--cache",
             "--offline",
             "--dir_cache",
@@ -153,14 +198,7 @@ def _docker_command(source: Path, output: Path, config: LocalVEPConfig) -> list[
             "homo_sapiens",
             "--assembly",
             "GRCh38",
-            "--pick",
-            "--canonical",
-            "--mane",
-            "--numbers",
-            "--protein",
-            "--variant_class",
-            "--af",
-            "--af_gnomade",
+            *LOCAL_VEP_FLAGS,
             "--fork",
             str(config.forks),
             "--force_overwrite",
@@ -176,6 +214,9 @@ def _configuration(config: LocalVEPConfig) -> dict[str, Any]:
     payload = asdict(config)
     payload["cache_dir"] = str(config.cache_dir.resolve())
     payload["fasta"] = str(config.fasta.resolve()) if config.fasta is not None else None
+    payload["options"] = list(LOCAL_VEP_FLAGS)
+    payload["output_fields"] = list(VEP_TAB_FIELDS)
+    payload["output_format"] = "tab"
     return payload
 
 
@@ -200,3 +241,24 @@ def _cache_matches(
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _validate_biallelic_vcf(source: Path) -> None:
+    opener = gzip.open if source.suffix == ".gz" else Path.open
+    records = 0
+    with opener(source, mode="rt", encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            if not line.strip() or line.startswith("#"):
+                continue
+            fields = line.rstrip().split("\t")
+            if len(fields) < 5:
+                raise LocalVEPError(f"line {line_number}: expected at least 5 VCF columns")
+            if "," in fields[4]:
+                raise LocalVEPError(
+                    f"line {line_number}: local VEP input must contain one ALT allele per row"
+                )
+            if fields[3].upper() == fields[4].upper():
+                raise LocalVEPError(f"line {line_number}: REF and ALT alleles must differ")
+            records += 1
+    if records == 0:
+        raise LocalVEPError("local VEP input contains no variants")

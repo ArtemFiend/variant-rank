@@ -24,15 +24,19 @@ def test_export_vep_input_streams_compressed_vcf_and_reuses_cache(tmp_path: Path
     second = export_vep_input(dataset, output, batch_size=1)
     with gzip.open(output, mode="rt", encoding="utf-8") as handle:
         lines = [line.rstrip() for line in handle]
-    identifier = lines[3].split("\t")[2]
+    chr17_line = next(line for line in lines if line.startswith("17\t"))
+    identifier = chr17_line.split("\t")[2]
     restored = parse_vep_response([{"input": f"17 7674220 {identifier} C T . . ."}])[0]
     manifest = json.loads(first.manifest.read_text())
 
     assert first.rows == 2
     assert second.cached is True
     assert lines[2].startswith("#CHROM")
+    assert lines[3].startswith("13\t")
     assert restored.variant == "17:7674220:C:T"
     assert len(manifest["output_sha256"]) == 64
+    assert manifest["sort_order"] == "canonical_chromosome,pos,ref,alt"
+    assert manifest["version"] == 2
 
 
 def test_export_vep_input_validates_schema_and_batch_size(tmp_path: Path) -> None:

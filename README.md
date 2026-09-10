@@ -130,18 +130,25 @@ Preview the pinned offline Docker workflow:
 
 ```bash
 uv run variantrank export-vep-input
-uv run variantrank annotate-local tests/fixtures/example.vcf --dry-run
+uv run variantrank annotate-local tests/fixtures/example.vep.vcf --dry-run
 ```
+
+The dataset exporter produces a deterministic, chromosome-wise sorted,
+biallelic VCF suitable for VEP's optimized input path.
 
 The offline runner validates checksums and reuses an existing annotation only
 when its sidecar manifest matches the input, VEP image, cache release, and
 runtime options.
 
-Raw offline JSON is converted to the shared typed Parquet contract with:
+Compact offline TSV is converted to the shared typed Parquet contract with:
 
 ```bash
-uv run variantrank parse-vep-output data/annotated/vep.jsonl
+uv run variantrank parse-vep-output data/annotated/vep.tsv
 ```
+
+The pinned local environment and end-to-end smoke test are recorded in the
+[VEP environment report](reports/tables/vep_environment_summary.md), including
+the explicit leakage boundary that removes ClinVar-derived co-located metadata.
 
 Build reproducible GRCh38 training labels from the current ClinVar release:
 
@@ -353,8 +360,8 @@ variant-rank/
 | CLI and service health endpoints | Available |
 | Unit and API test suite | Available |
 | Docker image and GitHub Actions workflows | Available |
-| ClinVar curation and versioned Parquet dataset | In progress |
-| VEP and population annotation | Scheduled |
+| ClinVar curation and versioned Parquet dataset | Available |
+| VEP and population annotation | Available |
 | Model comparison and gene-aware validation | Scheduled |
 | Calibration, SHAP, ranked inference and reports | Scheduled |
 

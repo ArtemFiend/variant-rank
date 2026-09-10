@@ -12,12 +12,13 @@ from variantrank.annotation import (
 )
 
 FIXTURE = Path(__file__).parents[1] / "fixtures" / "example.vcf"
+VEP_FIXTURE = Path(__file__).parents[1] / "fixtures" / "example.vep.vcf"
 
 
 def test_dry_run_builds_pinned_offline_command(tmp_path: Path) -> None:
     config = LocalVEPConfig(cache_dir=tmp_path / "cache", forks=6)
 
-    result = run_local_vep(FIXTURE, tmp_path / "vep.jsonl", config, dry_run=True)
+    result = run_local_vep(VEP_FIXTURE, tmp_path / "vep.jsonl", config, dry_run=True)
     rendered = format_command(result.command)
 
     assert result.executed is False
@@ -41,8 +42,8 @@ def test_successful_run_writes_manifest_and_is_cached(tmp_path: Path) -> None:
         return subprocess.CompletedProcess([], 0, stdout="", stderr="")
 
     config = LocalVEPConfig(cache_dir=cache)
-    first = run_local_vep(FIXTURE, output, config, runner=runner)
-    second = run_local_vep(FIXTURE, output, config, runner=runner)
+    first = run_local_vep(VEP_FIXTURE, output, config, runner=runner)
+    second = run_local_vep(VEP_FIXTURE, output, config, runner=runner)
     manifest = json.loads(first.manifest.read_text())
 
     assert first.executed is True
@@ -63,7 +64,7 @@ def test_failed_run_removes_partial_output(tmp_path: Path) -> None:
         return subprocess.CompletedProcess([], 2, stdout="", stderr="invalid variant")
 
     with pytest.raises(LocalVEPError, match="invalid variant"):
-        run_local_vep(FIXTURE, output, LocalVEPConfig(cache_dir=cache), runner=runner)
+        run_local_vep(VEP_FIXTURE, output, LocalVEPConfig(cache_dir=cache), runner=runner)
 
     assert not partial.exists()
 
@@ -71,7 +72,7 @@ def test_failed_run_removes_partial_output(tmp_path: Path) -> None:
 def test_run_requires_cache_for_execution(tmp_path: Path) -> None:
     with pytest.raises(LocalVEPError, match="cache directory"):
         run_local_vep(
-            FIXTURE,
+            VEP_FIXTURE,
             tmp_path / "vep.jsonl",
             LocalVEPConfig(cache_dir=tmp_path / "missing"),
         )
@@ -94,8 +95,48 @@ def test_run_rejects_success_without_output(tmp_path: Path) -> None:
 
     with pytest.raises(LocalVEPError, match="non-empty output"):
         run_local_vep(
-            FIXTURE,
+            VEP_FIXTURE,
             tmp_path / "vep.jsonl",
             LocalVEPConfig(cache_dir=cache),
             runner=runner,
+        )
+
+
+def test_run_rejects_multiallelic_input(tmp_path: Path) -> None:
+    with pytest.raises(LocalVEPError, match="one ALT allele"):
+        run_local_vep(
+            FIXTURE,
+            tmp_path / "vep.jsonl",
+            LocalVEPConfig(cache_dir=tmp_path),
+            dry_run=True,
+        )
+
+
+def test_run_rejects_empty_vcf(tmp_path: Path) -> None:
+    source = tmp_path / "empty.vcf"
+    source.write_text("##fileformat=VCFv4.2\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n")
+
+    with pytest.raises(LocalVEPError, match="contains no variants"):
+        run_local_vep(
+            source,
+            tmp_path / "vep.jsonl",
+            LocalVEPConfig(cache_dir=tmp_path),
+            dry_run=True,
+        )
+
+
+def test_run_rejects_no_change_allele(tmp_path: Path) -> None:
+    source = tmp_path / "no-change.vcf"
+    source.write_text(
+        "##fileformat=VCFv4.2\n"
+        "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n"
+        "1\t100\t.\tA\tA\t.\tPASS\t.\n"
+    )
+
+    with pytest.raises(LocalVEPError, match="must differ"):
+        run_local_vep(
+            source,
+            tmp_path / "vep.tsv",
+            LocalVEPConfig(cache_dir=tmp_path),
+            dry_run=True,
         )

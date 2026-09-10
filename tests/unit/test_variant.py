@@ -25,3 +25,8 @@ def test_variant_rejects_non_positive_position() -> None:
 def test_variant_rejects_missing_fields(kwargs: dict[str, str | int], message: str) -> None:
     with pytest.raises(ValueError, match=message):
         Variant(**kwargs)  # type: ignore[arg-type]
+
+
+def test_variant_rejects_identical_ref_and_alt() -> None:
+    with pytest.raises(ValueError, match="must differ"):
+        Variant(chrom="1", pos=100, ref="A", alt="A")
