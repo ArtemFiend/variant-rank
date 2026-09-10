@@ -17,11 +17,14 @@ def test_random_split_has_expected_sizes_and_class_balance() -> None:
 
 def test_gene_aware_split_keeps_genes_disjoint() -> None:
     genes = pd.Series(np.repeat([f"GENE{index}" for index in range(70)], 2))
+    genes.iloc[:2] = "GENE0;BRIDGE"
+    genes.iloc[2:4] = "BRIDGE;GENE1"
     target = pd.Series([0, 1] * 70)
 
     split = gene_aware_split(target, genes)
     partitions = [
-        set(genes.iloc[indices]) for indices in (split.train, split.validation, split.test)
+        {token for value in genes.iloc[indices] for token in value.replace(";", ",").split(",")}
+        for indices in (split.train, split.validation, split.test)
     ]
 
     assert not partitions[0] & partitions[1]

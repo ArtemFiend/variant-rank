@@ -358,9 +358,9 @@ def train_command(
             exists=True,
             dir_okay=False,
             readable=True,
-            help="Curated ClinVar Parquet dataset.",
+            help="Curated labels or model-ready feature Parquet dataset.",
         ),
-    ] = Path("data/processed/clinvar.parquet"),
+    ] = Path("data/features/clinvar.features.parquet"),
     artifact_dir: Annotated[
         Path,
         typer.Option(help="Root directory for models, metrics, and metadata."),
@@ -369,16 +369,30 @@ def train_command(
         str,
         typer.Option(help="Validation strategy: random, gene, or both."),
     ] = "both",
+    feature_set: Annotated[
+        str,
+        typer.Option(help="Feature contract: basic or annotated."),
+    ] = "annotated",
+    cohort: Annotated[
+        str,
+        typer.Option(help="Training cohort: all or high-confidence."),
+    ] = "all",
     random_seed: Annotated[int, typer.Option(help="Reproducible random seed.")] = 42,
     max_rows: Annotated[
         int | None,
         typer.Option(min=100, help="Optional stratified development sample."),
     ] = None,
 ) -> None:
-    """Train Dummy and Logistic Regression baselines."""
+    """Train Dummy, Logistic Regression, and Random Forest baselines."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     if strategy not in {"random", "gene", "both"}:
         logger.error("Unknown validation strategy %r", strategy)
+        raise typer.Exit(code=2)
+    if feature_set not in {"basic", "annotated"}:
+        logger.error("Unknown feature set %r", feature_set)
+        raise typer.Exit(code=2)
+    if cohort not in {"all", "high-confidence"}:
+        logger.error("Unknown cohort %r", cohort)
         raise typer.Exit(code=2)
     strategies = ["random", "gene"] if strategy == "both" else [strategy]
 
@@ -389,6 +403,8 @@ def train_command(
                 dataset,
                 artifact_dir,
                 strategy=selected_strategy,  # type: ignore[arg-type]
+                feature_set=feature_set,  # type: ignore[arg-type]
+                high_confidence_only=cohort == "high-confidence",
                 random_seed=random_seed,
                 max_rows=max_rows,
             )

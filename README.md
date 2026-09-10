@@ -180,7 +180,10 @@ class distributions, and filtering counts.
 Train the first leakage-safe baselines under random and gene-aware validation:
 
 ```bash
-uv run variantrank train --strategy both
+uv run variantrank train \
+  --dataset data/processed/clinvar.parquet \
+  --feature-set basic \
+  --strategy both
 ```
 
 For a fast development run, add `--max-rows 100000`. The persisted artifact
@@ -205,6 +208,22 @@ they are not presented as calibrated clinical probabilities. The
 [complete baseline report](reports/tables/baseline_results.md) includes the
 dummy baseline, all classification and probability metrics, split sizes, and
 interpretation.
+
+### VEP-annotated baselines
+
+The full leakage-audited feature set substantially improves discrimination on
+both variant-level and gene-aware held-out partitions.
+
+| Dataset | Split | Logistic ROC-AUC | RF ROC-AUC | RF PR-AUC | RF MCC |
+|---|---|---:|---:|---:|---:|
+| A | Random | 0.9881 | 0.9922 | 0.9728 | 0.8753 |
+| A | Gene-aware | 0.9833 | 0.9923 | 0.9731 | 0.8770 |
+| B, high confidence | Random | 0.9918 | 0.9968 | 0.9911 | 0.9239 |
+| B, high confidence | Gene-aware | 0.9715 | 0.9977 | 0.9931 | 0.9306 |
+
+These are retrospective ClinVar cohort results, not calibrated clinical
+probabilities. Full metrics, split sizes, estimator settings, and interpretation
+are in the [annotated baseline report](reports/tables/annotated_baseline_results.md).
 
 Start the API locally:
 
@@ -374,7 +393,9 @@ variant-rank/
 | ClinVar curation and versioned Parquet dataset | Available |
 | VEP and population annotation | Available |
 | Leakage-safe model-ready feature dataset | Available |
-| Model comparison and gene-aware validation | Scheduled |
+| Dummy, Logistic Regression and Random Forest comparison | Available |
+| Random and gene-aware validation | Available |
+| CatBoost, LightGBM and chromosome holdout | Scheduled |
 | Calibration, SHAP, ranked inference and reports | Scheduled |
 
 The full engineering and scientific scope is documented in
